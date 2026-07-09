@@ -32,6 +32,16 @@ groupGeneral = "General"
 
 showDashboard = input.bool(true, "Show Dashboard", group = groupGeneral)
 debugMode     = input.bool(false, "Debug Mode", group = groupGeneral)
+//=============================================================================
+// STRUCTURE INPUTS
+//=============================================================================
+
+groupStructure = "Structure"
+
+pivotLeft  = input.int(5, "Pivot Left", minval = 1, group = groupStructure)
+pivotRight = input.int(5, "Pivot Right", minval = 1, group = groupStructure)
+
+showStructureLabels = input.bool(true, "Show Structure Labels", group = groupStructure)
 
 //=============================================================================
 // ASSET DETECTION
@@ -67,6 +77,22 @@ else if str.contains(symbolName, "GBP")
 var string marketState = "UNKNOWN"
 var float trendScore = 0.0
 var float confidenceScore = 0.0
+//=============================================================================
+// STRUCTURE STATE
+//=============================================================================
+
+var float lastSwingHigh = na
+var float lastSwingLow  = na
+
+var string structureDirection = "NEUTRAL"
+
+var float structureScore = 0
+
+var bool bullBOS = false
+var bool bearBOS = false
+
+var bool bullCHOCH = false
+var bool bearCHOCH = false
 
 //=============================================================================
 // UTILITY FUNCTIONS
@@ -107,9 +133,8 @@ table.cell(dashboard,1,5,str.tostring(math.round(trendScore)))
     table.cell(dashboard,0,6,"Decision")
 table.cell(dashboard,1,6,marketState)
 
-    table.cell(dashboard,0,7,"Build")
-    table.cell(dashboard,1,7,TITAN_BUILD)
-
+    table.cell(dashboard,0,7,"Structure")
+table.cell(dashboard,1,7,structureDirection)
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -216,6 +241,86 @@ getTrendDirection()=>
         dir:="ULTRA BEAR"
 
     dir
+    //=============================================================================
+// SMART MARKET STRUCTURE ENGINE
+//=============================================================================
+
+pivotHigh = ta.pivothigh(high, pivotLeft, pivotRight)
+pivotLow  = ta.pivotlow(low, pivotLeft, pivotRight)
+
+if not na(pivotHigh)
+
+    if not na(lastSwingHigh)
+
+        if pivotHigh > lastSwingHigh
+
+            structureDirection := "HH"
+
+            structureScore += 15
+
+            if showStructureLabels
+                label.new(
+                    bar_index-pivotRight,
+                    pivotHigh,
+                    "HH",
+                    style=label.style_label_down,
+                    color=color.green,
+                    textcolor=color.white)
+
+        else
+
+            structureDirection := "LH"
+
+            structureScore -= 15
+
+            if showStructureLabels
+                label.new(
+                    bar_index-pivotRight,
+                    pivotHigh,
+                    "LH",
+                    style=label.style_label_down,
+                    color=color.red,
+                    textcolor=color.white)
+
+    lastSwingHigh := pivotHigh
+
+//------------------------------------------------------
+
+if not na(pivotLow)
+
+    if not na(lastSwingLow)
+
+        if pivotLow > lastSwingLow
+
+            structureDirection := "HL"
+
+            structureScore += 15
+
+            if showStructureLabels
+                label.new(
+                    bar_index-pivotRight,
+                    pivotLow,
+                    "HL",
+                    style=label.style_label_up,
+                    color=color.green,
+                    textcolor=color.white)
+
+        else
+
+            structureDirection := "LL"
+
+            structureScore -= 15
+
+            if showStructureLabels
+                label.new(
+                    bar_index-pivotRight,
+                    pivotLow,
+                    "LL",
+                    style=label.style_label_up,
+                    color=color.red,
+                    textcolor=color.white)
+
+    lastSwingLow := pivotLow
 //=============================================================================
 // MAIN
 //=============================================================================
