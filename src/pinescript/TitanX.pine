@@ -21,8 +21,8 @@ indicator(
 // VERSION
 //=============================================================================
 
-const string TITAN_VERSION = "0.5.1-dev"
-const string TITAN_BUILD   = "0002"
+const string TITAN_VERSION = "0.5.3-dev"
+const string TITAN_BUILD   = "0004"
 
 //=============================================================================
 // INPUTS
@@ -78,7 +78,7 @@ var string marketState = "UNKNOWN"
 var float trendScore = 0.0
 var float confidenceScore = 0.0
 //=============================================================================
-// STRUCTURE STATE
+// STRUCTURE VARIABLES
 //=============================================================================
 
 var float lastSwingHigh = na
@@ -108,33 +108,58 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,8)
+var table dashboard = table.new(position.top_right,2,10)
+getTrendDirection() =>
 
-updateDashboard()=>
+    string dir = "NEUTRAL"
 
-    table.cell(dashboard,0,0,"TITAN X")
-    table.cell(dashboard,1,0,TITAN_VERSION)
+    if trendScore >= 90
+        dir := "ULTRA BULL"
+    else if trendScore >= 75
+        dir := "STRONG BULL"
+    else if trendScore >= 60
+        dir := "BULL"
+    else if trendScore >= 40
+        dir := "NEUTRAL"
+    else if trendScore >= 25
+        dir := "BEAR"
+    else if trendScore >= 10
+        dir := "STRONG BEAR"
+    else
+        dir := "ULTRA BEAR"
 
-    table.cell(dashboard,0,1,"Symbol")
-    table.cell(dashboard,1,1,symbolName)
+    dir
+updateDashboard() =>
 
-    table.cell(dashboard,0,2,"TF")
-    table.cell(dashboard,1,2,timeframeName)
+    table.cell(dashboard, 0, 0, "TITAN X")
+    table.cell(dashboard, 1, 0, TITAN_VERSION)
 
-    table.cell(dashboard,0,3,"Asset")
-    table.cell(dashboard,1,3,assetType)
+    table.cell(dashboard, 0, 1, "Symbol")
+    table.cell(dashboard, 1, 1, symbolName)
 
-    table.cell(dashboard,0,4,"Trend")
-table.cell(dashboard,1,4,"Initializing...")
+    table.cell(dashboard, 0, 2, "TF")
+    table.cell(dashboard, 1, 2, timeframeName)
 
-    table.cell(dashboard,0,5,"Score")
-table.cell(dashboard,1,5,str.tostring(math.round(trendScore)))
+    table.cell(dashboard, 0, 3, "Asset")
+    table.cell(dashboard, 1, 3, assetType)
 
-    table.cell(dashboard,0,6,"Decision")
-table.cell(dashboard,1,6,marketState)
+    table.cell(dashboard, 0, 4, "Trend")
+    table.cell(dashboard, 1, 4, getTrendDirection())
 
-    table.cell(dashboard,0,7,"Structure")
-table.cell(dashboard,1,7,structureDirection)
+    table.cell(dashboard, 0, 5, "Score")
+    table.cell(dashboard, 1, 5, str.tostring(math.round(trendScore)))
+
+    table.cell(dashboard, 0, 6, "Decision")
+    table.cell(dashboard, 1, 6, marketState)
+
+    table.cell(dashboard, 0, 7, "Structure")
+    table.cell(dashboard, 1, 7, structureDirection)
+
+    table.cell(dashboard, 0, 8, "Struct Score")
+    table.cell(dashboard, 1, 8, str.tostring(math.round(structureScore)))
+
+    table.cell(dashboard, 0, 9, "Build")
+    table.cell(dashboard, 1, 9, TITAN_BUILD)
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -215,32 +240,7 @@ calculateDecision()=>
 //------------------------------------------------------------
 // Trend Direction
 //------------------------------------------------------------
-getTrendDirection()=>
 
-    string dir="NEUTRAL"
-
-    if trendScore>=90
-        dir:="ULTRA BULL"
-
-    else if trendScore>=75
-        dir:="STRONG BULL"
-
-    else if trendScore>=60
-        dir:="BULL"
-
-    else if trendScore>=40
-        dir:="NEUTRAL"
-
-    else if trendScore>=25
-        dir:="BEAR"
-
-    else if trendScore>=10
-        dir:="STRONG BEAR"
-
-    else
-        dir:="ULTRA BEAR"
-
-    dir
     //=============================================================================
 // SMART MARKET STRUCTURE ENGINE
 //=============================================================================
