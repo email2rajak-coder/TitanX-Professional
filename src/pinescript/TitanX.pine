@@ -163,7 +163,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,18)
+var table dashboard = table.new(position.top_right,2,21)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -237,6 +237,18 @@ table.cell(dashboard,1,16,bearSweep ? "YES" : "-")
 
 table.cell(dashboard,0,17,"Sweep Score")
 table.cell(dashboard,1,17,str.tostring(math.round(sweepScore)))
+table.cell(dashboard,0,18,"Bias")
+table.cell(dashboard,1,18,marketBias)
+
+table.cell(dashboard,0,19,"Confluence")
+table.cell(dashboard,1,19,str.tostring(math.round(confluenceScore)))
+
+table.cell(dashboard,0,20,"Ready")
+table.cell(
+     dashboard,
+     1,
+     20,
+     confluenceScore >= 80 ? "YES" : "WAIT")
 //=============================================================================
 // LOGGER
 //=============================================================================
