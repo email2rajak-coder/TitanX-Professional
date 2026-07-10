@@ -42,6 +42,23 @@ pivotLeft  = input.int(5, "Pivot Left", minval = 1, group = groupStructure)
 pivotRight = input.int(5, "Pivot Right", minval = 1, group = groupStructure)
 
 showStructureLabels = input.bool(true, "Show Structure Labels", group = groupStructure)
+//=============================================================================
+// LIQUIDITY INPUTS
+//=============================================================================
+
+groupLiquidity = "Liquidity"
+
+eqTolerance = input.float(
+     0.10,
+     "Equal High/Low Tolerance (%)",
+     minval = 0.01,
+     step = 0.01,
+     group = groupLiquidity)
+
+showLiquidityLabels = input.bool(
+     true,
+     "Show Liquidity Labels",
+     group = groupLiquidity)
 
 //=============================================================================
 // ASSET DETECTION
@@ -93,6 +110,24 @@ var bool bearBOS = false
 
 var bool bullCHOCH = false
 var bool bearCHOCH = false
+//=============================================================================
+// LIQUIDITY VARIABLES
+//=============================================================================
+
+var bool eqHighDetected = false
+var bool eqLowDetected = false
+
+var float equalHighPrice = na
+var float equalLowPrice = na
+
+var float liquidityScore = 0.0
+
+//=============================================================================
+// BOS / CHOCH
+//=============================================================================
+
+var float previousSwingHigh = na
+var float previousSwingLow  = na
 
 //=============================================================================
 // UTILITY FUNCTIONS
@@ -108,7 +143,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,10)
+var table dashboard = table.new(position.top_right,2,15)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -158,8 +193,22 @@ updateDashboard() =>
     table.cell(dashboard, 0, 8, "Struct Score")
     table.cell(dashboard, 1, 8, str.tostring(math.round(structureScore)))
 
-    table.cell(dashboard, 0, 9, "Build")
-    table.cell(dashboard, 1, 9, TITAN_BUILD)
+    table.cell(dashboard,0,9,"BOS")
+table.cell(dashboard,1,9,bullBOS ? "BULL" : bearBOS ? "BEAR" : "-")
+
+table.cell(dashboard,0,10,"CHOCH")
+table.cell(dashboard,1,10,bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-")
+
+table.cell(dashboard,0,11,"Build")
+table.cell(dashboard,1,11,TITAN_BUILD)
+table.cell(dashboard,0,12,"EQH")
+table.cell(dashboard,1,12,eqHighDetected ? "YES" : "NO")
+
+table.cell(dashboard,0,13,"EQL")
+table.cell(dashboard,1,13,eqLowDetected ? "YES" : "NO")
+
+table.cell(dashboard,0,14,"Liquidity")
+table.cell(dashboard,1,14,str.tostring(liquidityScore))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -256,7 +305,7 @@ if not na(pivotHigh)
 
             structureDirection := "HH"
 
-            structureScore += 15
+            structureScore := math.min(structureScore + 15, 100)
 
             if showStructureLabels
                 label.new(
@@ -271,7 +320,7 @@ if not na(pivotHigh)
 
             structureDirection := "LH"
 
-            structureScore -= 15
+            structureScore := math.max(structureScore - 15, 0)
 
             if showStructureLabels
                 label.new(
@@ -282,8 +331,13 @@ if not na(pivotHigh)
                     color=color.red,
                     textcolor=color.white)
 
-    lastSwingHigh := pivotHigh
+    previousSwingHigh := lastSwingHigh
+lastSwingHigh := pivotHigh
 
+//------------------------------------------------------
+
+//------------------------------------------------------
+// LOW STRUCTURE
 //------------------------------------------------------
 
 if not na(pivotLow)
@@ -293,34 +347,115 @@ if not na(pivotLow)
         if pivotLow > lastSwingLow
 
             structureDirection := "HL"
-
-            structureScore += 15
+            structureScore := math.min(structureScore + 15, 100)
 
             if showStructureLabels
                 label.new(
-                    bar_index-pivotRight,
+                    bar_index - pivotRight,
                     pivotLow,
                     "HL",
-                    style=label.style_label_up,
-                    color=color.green,
-                    textcolor=color.white)
+                    style = label.style_label_up,
+                    color = color.green,
+                    textcolor = color.white
+                )
 
         else
 
             structureDirection := "LL"
-
-            structureScore -= 15
+            structureScore := math.max(structureScore - 15, 0)
 
             if showStructureLabels
                 label.new(
-                    bar_index-pivotRight,
+                    bar_index - pivotRight,
                     pivotLow,
                     "LL",
-                    style=label.style_label_up,
-                    color=color.red,
-                    textcolor=color.white)
+                    style = label.style_label_up,
+                    color = color.red,
+                    textcolor = color.white
+                )
 
+    previousSwingLow := lastSwingLow
     lastSwingLow := pivotLow
+    //=============================================================================
+// LIQUIDITY ENGINE
+//=============================================================================
+
+eqHighDetected := false
+eqLowDetected := false
+
+if not na(lastSwingHigh) and not na(previousSwingHigh)
+
+    float highDiff =
+         math.abs(lastSwingHigh - previousSwingHigh)
+
+    float highTolerance =
+         lastSwingHigh * eqTolerance / 100
+
+    if highDiff <= highTolerance
+
+        eqHighDetected := true
+        equalHighPrice := lastSwingHigh
+
+        liquidityScore :=
+             math.min(liquidityScore + 20, 100)
+
+        if showLiquidityLabels
+            label.new(
+                 bar_index,
+                 equalHighPrice,
+                 "EQH",
+                 style = label.style_label_down,
+                 color = color.orange,
+                 textcolor = color.white)
+
+if not na(lastSwingLow) and not na(previousSwingLow)
+
+    float lowDiff =
+         math.abs(lastSwingLow - previousSwingLow)
+
+    float lowTolerance =
+         lastSwingLow * eqTolerance / 100
+
+    if lowDiff <= lowTolerance
+
+        eqLowDetected := true
+        equalLowPrice := lastSwingLow
+
+        liquidityScore :=
+             math.min(liquidityScore + 20,100)
+
+        if showLiquidityLabels
+            label.new(
+                 bar_index,
+                 equalLowPrice,
+                 "EQL",
+                 style = label.style_label_up,
+                 color = color.orange,
+                 textcolor = color.white)
+//=============================================================================
+// BREAK OF STRUCTURE
+//=============================================================================
+
+bullBOS := false
+bearBOS := false
+
+if not na(lastSwingHigh)
+    bullBOS := close > lastSwingHigh
+
+if not na(lastSwingLow)
+    bearBOS := close < lastSwingLow
+    //=============================================================================
+// CHANGE OF CHARACTER
+//=============================================================================
+
+bullCHOCH := false
+bearCHOCH := false
+
+if structureDirection == "LL" and bullBOS
+    bullCHOCH := true
+
+if structureDirection == "HH" and bearBOS
+    bearCHOCH := true
 //=============================================================================
 // MAIN
 //=============================================================================
