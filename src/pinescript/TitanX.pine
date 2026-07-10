@@ -59,6 +59,17 @@ showLiquidityLabels = input.bool(
      true,
      "Show Liquidity Labels",
      group = groupLiquidity)
+     //=============================================================================
+// MULTI TIMEFRAME
+//=============================================================================
+
+groupMTF = "Multi Timeframe"
+
+enableMTF = input.bool(true, "Enable MTF", group = groupMTF)
+
+higherTF = input.timeframe("60", "Higher Timeframe", group = groupMTF)
+
+showMTFDashboard = input.bool(true, "Show MTF Info", group = groupMTF)
 
 //=============================================================================
 // ASSET DETECTION
@@ -141,6 +152,18 @@ var string marketBias = "NEUTRAL"
 var bool trendAligned = false
 var bool structureAligned = false
 var bool liquidityAligned = false
+//=============================================================================
+// MTF VARIABLES
+//=============================================================================
+
+var string htfTrend = "UNKNOWN"
+var float htfEMA20 = na
+var float htfEMA50 = na
+
+var bool htfBullish = false
+var bool htfBearish = false
+
+var float mtfScore = 0.0
 
 //=============================================================================
 // BOS / CHOCH
@@ -163,7 +186,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,21)
+var table dashboard = table.new(position.top_right,2,24)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -244,11 +267,16 @@ table.cell(dashboard,0,19,"Confluence")
 table.cell(dashboard,1,19,str.tostring(math.round(confluenceScore)))
 
 table.cell(dashboard,0,20,"Ready")
-table.cell(
-     dashboard,
-     1,
-     20,
-     confluenceScore >= 80 ? "YES" : "WAIT")
+table.cell(dashboard, 1, 20, confluenceScore >= 80 ? "YES" : "WAIT")
+
+table.cell(dashboard,0,21,"HTF Trend")
+table.cell(dashboard,1,21,htfTrend)
+
+table.cell(dashboard,0,22,"MTF Score")
+table.cell(dashboard,1,22,str.tostring(math.round(mtfScore)))
+
+table.cell(dashboard,0,23,"MTF Align")
+table.cell(dashboard,1,23,mtfScore >= 50 ? "YES" : "NO")
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -301,6 +329,24 @@ calculateTrend()=>
     score += ema200 > ema200[1] ? 2 : 0
 
     score
+    //=============================================================================
+// HIGHER TIMEFRAME DATA
+//=============================================================================
+
+if enableMTF
+
+    htfEMA20 := request.security(
+        syminfo.tickerid,
+        higherTF,
+        ta.ema(close,20))
+
+    htfEMA50 := request.security(
+        syminfo.tickerid,
+        higherTF,
+        ta.ema(close,50))
+
+    htfBullish := htfEMA20 > htfEMA50
+    htfBearish := htfEMA20 < htfEMA50
 
 //------------------------------------------------------------
 // Confidence
@@ -572,6 +618,40 @@ if confluenceScore >= 80
 
 else if confluenceScore <= 20
     marketBias := "BEARISH"
+    //=============================================================================
+// MTF ENGINE
+//=============================================================================
+
+mtfScore := 0
+
+if enableMTF
+
+    if htfBullish
+        mtfScore += 50
+
+    if htfBearish
+        mtfScore -= 50
+
+    if htfBullish and trendScore >= 70
+        mtfScore += 50
+
+    if htfBearish and trendScore <= 30
+        mtfScore -= 50
+
+if mtfScore > 100
+    mtfScore := 100
+
+if mtfScore < -100
+    mtfScore := -100
+
+if htfBullish
+    htfTrend := "BULLISH"
+
+else if htfBearish
+    htfTrend := "BEARISH"
+
+else
+    htfTrend := "SIDEWAYS"
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
