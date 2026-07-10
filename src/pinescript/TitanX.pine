@@ -132,37 +132,15 @@ var float lastSweepPrice = na
 
 var float sweepScore = 0.0
 //=============================================================================
-// CONFLUENCE ENGINE
-//=============================================================================
-
-var float confluenceScore = 0.0
-var string marketBias = "NEUTRAL"
-
-var bool trendAligned = false
-var bool structureAligned = false
-var bool liquidityAligned = false
-
-//=============================================================================
 // CONFLUENCE VARIABLES
 //=============================================================================
 
 var float confluenceScore = 0.0
-
 var string marketBias = "NEUTRAL"
 
 var bool trendAligned = false
 var bool structureAligned = false
 var bool liquidityAligned = false
-//=============================================================================
-// LIQUIDITY SWEEP
-//=============================================================================
-
-var bool bullSweep = false
-var bool bearSweep = false
-
-var float lastSweepPrice = na
-
-var float sweepScore = 0.0
 
 //=============================================================================
 // BOS / CHOCH
