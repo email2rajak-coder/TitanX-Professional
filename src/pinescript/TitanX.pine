@@ -294,7 +294,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,38)
+var table dashboard = table.new(position.top_right,2,42)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -429,6 +429,17 @@ table.cell(dashboard,1,36,str.tostring(sessionLow))
 
 table.cell(dashboard,0,37,"Session Score")
 table.cell(dashboard,1,37,str.tostring(math.round(sessionScore)))
+table.cell(dashboard,0,38,"Confidence")
+table.cell(dashboard,1,38,str.tostring(math.round(confidenceScore)) + "%")
+
+table.cell(dashboard,0,39,"Grade")
+table.cell(dashboard,1,39,tradeGrade)
+
+table.cell(dashboard,0,40,"Entry")
+table.cell(dashboard,1,40,entryQuality)
+
+table.cell(dashboard,0,41,"Risk")
+table.cell(dashboard,1,41,riskRating)
 //=============================================================================
 // LOGGER
 //=============================================================================
