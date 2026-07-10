@@ -70,6 +70,15 @@ enableMTF = input.bool(true, "Enable MTF", group = groupMTF)
 higherTF = input.timeframe("60", "Higher Timeframe", group = groupMTF)
 
 showMTFDashboard = input.bool(true, "Show MTF Info", group = groupMTF)
+//=============================================================================
+// FAIR VALUE GAP
+//=============================================================================
+
+groupFVG = "Fair Value Gap"
+
+showFVG = input.bool(true, "Show Fair Value Gaps", group = groupFVG)
+
+minFVGTicks = input.int(5, "Minimum Gap (Ticks)", minval = 1, group = groupFVG)
 
 //=============================================================================
 // ASSET DETECTION
@@ -164,6 +173,20 @@ var bool htfBullish = false
 var bool htfBearish = false
 
 var float mtfScore = 0.0
+//=============================================================================
+// FVG VARIABLES
+//=============================================================================
+
+var bool bullFVG = false
+var bool bearFVG = false
+
+var float bullFVGHigh = na
+var float bullFVGLow = na
+
+var float bearFVGHigh = na
+var float bearFVGLow = na
+
+var float fvgScore = 0.0
 
 //=============================================================================
 // BOS / CHOCH
@@ -186,7 +209,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,24)
+var table dashboard = table.new(position.top_right,2,27)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -277,6 +300,15 @@ table.cell(dashboard,1,22,str.tostring(math.round(mtfScore)))
 
 table.cell(dashboard,0,23,"MTF Align")
 table.cell(dashboard,1,23,mtfScore >= 50 ? "YES" : "NO")
+
+table.cell(dashboard,0,24,"Bull FVG")
+table.cell(dashboard,1,24,bullFVG ? "YES" : "-")
+
+table.cell(dashboard,0,25,"Bear FVG")
+table.cell(dashboard,1,25,bearFVG ? "YES" : "-")
+
+table.cell(dashboard,0,26,"FVG Score")
+table.cell(dashboard,1,26,str.tostring(math.round(fvgScore)))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -652,6 +684,64 @@ else if htfBearish
 
 else
     htfTrend := "SIDEWAYS"
+    //=============================================================================
+// FAIR VALUE GAP ENGINE
+//=============================================================================
+
+bullFVG := false
+bearFVG := false
+
+//-------------------------------------
+// Bullish FVG
+//-------------------------------------
+
+if low > high[2]
+
+    gapSize = (low - high[2]) / syminfo.mintick
+
+    if gapSize >= minFVGTicks
+
+        bullFVG := true
+
+        bullFVGHigh := low
+        bullFVGLow := high[2]
+
+        fvgScore := math.min(fvgScore + 20,100)
+
+        if showFVG
+            box.new(
+                 bar_index-2,
+                 low,
+                 bar_index,
+                 high[2],
+                 bgcolor=color.new(color.green,85),
+                 border_color=color.green)
+
+//-------------------------------------
+// Bearish FVG
+//-------------------------------------
+
+if high < low[2]
+
+    gapSize = (low[2]-high)/syminfo.mintick
+
+    if gapSize >= minFVGTicks
+
+        bearFVG := true
+
+        bearFVGHigh := low[2]
+        bearFVGLow := high
+
+        fvgScore := math.min(fvgScore+20,100)
+
+        if showFVG
+            box.new(
+                 bar_index-2,
+                 low[2],
+                 bar_index,
+                 high,
+                 bgcolor=color.new(color.red,85),
+                 border_color=color.red)
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
