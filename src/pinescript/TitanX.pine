@@ -79,6 +79,15 @@ groupFVG = "Fair Value Gap"
 showFVG = input.bool(true, "Show Fair Value Gaps", group = groupFVG)
 
 minFVGTicks = input.int(5, "Minimum Gap (Ticks)", minval = 1, group = groupFVG)
+//=============================================================================
+// ORDER BLOCK
+//=============================================================================
+
+groupOB = "Order Blocks"
+
+showOrderBlocks = input.bool(true, "Show Order Blocks", group = groupOB)
+
+obLookback = input.int(20, "Lookback", minval = 5, group = groupOB)
 
 //=============================================================================
 // ASSET DETECTION
@@ -187,6 +196,20 @@ var float bearFVGHigh = na
 var float bearFVGLow = na
 
 var float fvgScore = 0.0
+//=============================================================================
+// ORDER BLOCK VARIABLES
+//=============================================================================
+
+var bool bullOB = false
+var bool bearOB = false
+
+var float bullOBHigh = na
+var float bullOBLow = na
+
+var float bearOBHigh = na
+var float bearOBLow = na
+
+var float orderBlockScore = 0.0
 
 //=============================================================================
 // BOS / CHOCH
@@ -209,7 +232,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,27)
+var table dashboard = table.new(position.top_right,2,30)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -309,6 +332,15 @@ table.cell(dashboard,1,25,bearFVG ? "YES" : "-")
 
 table.cell(dashboard,0,26,"FVG Score")
 table.cell(dashboard,1,26,str.tostring(math.round(fvgScore)))
+
+table.cell(dashboard,0,27,"Bull OB")
+table.cell(dashboard,1,27,bullOB ? "YES" : "-")
+
+table.cell(dashboard,0,28,"Bear OB")
+table.cell(dashboard,1,28,bearOB ? "YES" : "-")
+
+table.cell(dashboard,0,29,"OB Score")
+table.cell(dashboard,1,29,str.tostring(math.round(orderBlockScore)))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -742,6 +774,56 @@ if high < low[2]
                  high,
                  bgcolor=color.new(color.red,85),
                  border_color=color.red)
+                //=============================================================================
+// ORDER BLOCK ENGINE
+//=============================================================================
+
+bullOB := false
+bearOB := false
+
+//--------------------------------------------------
+// Bullish Order Block
+//--------------------------------------------------
+
+if ta.lowest(low, obLookback) == low and close > open
+
+    bullOB := true
+
+    bullOBHigh := high
+    bullOBLow := low
+
+    orderBlockScore := math.min(orderBlockScore + 15, 100)
+
+    if showOrderBlocks
+        box.new(
+            bar_index,
+            high,
+            bar_index + 5,
+            low,
+            bgcolor = color.new(color.green, 85),
+            border_color = color.green)
+
+//--------------------------------------------------
+// Bearish Order Block
+//--------------------------------------------------
+
+if ta.highest(high, obLookback) == high and close < open
+
+    bearOB := true
+
+    bearOBHigh := high
+    bearOBLow := low
+
+    orderBlockScore := math.min(orderBlockScore + 15, 100)
+
+    if showOrderBlocks
+        box.new(
+            bar_index,
+            high,
+            bar_index + 5,
+            low,
+            bgcolor = color.new(color.red, 85),
+            border_color = color.red)
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
