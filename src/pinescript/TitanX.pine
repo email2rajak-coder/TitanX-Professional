@@ -284,6 +284,16 @@ var bool allowShort = false
 //=====================================================
 
 var string tradeQuality = "UNKNOWN"
+//=====================================================
+// RISK MANAGEMENT
+//=====================================================
+
+var float stopLoss = na
+var float takeProfit1 = na
+var float takeProfit2 = na
+var float takeProfit3 = na
+
+var float riskReward = na
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -305,7 +315,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,43)
+var table dashboard = table.new(position.top_right,2,70)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -454,6 +464,21 @@ table.cell(dashboard,1,41,riskRating)
 
 table.cell(dashboard,0,42,"Trade Quality")
 table.cell(dashboard,1,42,tradeQuality)
+
+table.cell(dashboard,0,43,"SL")
+table.cell(dashboard,1,43,str.tostring(stopLoss))
+
+table.cell(dashboard,0,44,"TP1")
+table.cell(dashboard,1,44,str.tostring(takeProfit1))
+
+table.cell(dashboard,0,45,"TP2")
+table.cell(dashboard,1,45,str.tostring(takeProfit2))
+
+table.cell(dashboard,0,46,"TP3")
+table.cell(dashboard,1,46,str.tostring(takeProfit3))
+
+table.cell(dashboard,0,47,"R:R")
+table.cell(dashboard,1,47,"1:"+str.tostring(riskReward))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -1168,6 +1193,37 @@ allowShort :=
      structureScore <= 40 and
      liquidityScore >= 50 and
      htfBearish
+     //=====================================================
+// RISK MANAGEMENT ENGINE
+//=====================================================
+
+if allowLong
+
+    stopLoss := sessionLow
+
+    risk = close - stopLoss
+
+    takeProfit1 := close + risk
+
+    takeProfit2 := close + risk * 2
+
+    takeProfit3 := close + risk * 3
+
+    riskReward := 3
+
+if allowShort
+
+    stopLoss := sessionHigh
+
+    risk = stopLoss - close
+
+    takeProfit1 := close - risk
+
+    takeProfit2 := close - risk * 2
+
+    takeProfit3 := close - risk * 3
+
+    riskReward := 3
 //----------------------------------------------------
 // Trade Grade
 //----------------------------------------------------
