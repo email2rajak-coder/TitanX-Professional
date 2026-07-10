@@ -516,9 +516,18 @@ if enableMTF
 //------------------------------------------------------------
 calculateConfidence()=>
 
-    float confidence = trendScore
+    float confidence = 0
 
-    confidence
+    confidence += trendScore * 0.30
+    confidence += structureScore * 0.20
+    confidence += liquidityScore * 0.15
+    confidence += sweepScore * 0.10
+    confidence += mtfScore * 0.10
+    confidence += fvgScore * 0.05
+    confidence += pdScore * 0.05
+    confidence += sessionScore * 0.05
+
+    math.min(confidence,100)
     //==============================================================
 // FINAL SCORE ENGINE
 //==============================================================
@@ -587,14 +596,20 @@ calculateFinalScore()=>
 
 calculateSmartDecision()=>
 
-    float finalScore = calculateFinalScore()
+    float score = calculateFinalScore()
 
     string result = "WAIT"
 
-    if finalScore >= 75
+    if score >= 85 and htfBullish
+        result := "STRONG BUY"
+
+    else if score >= 75
         result := "BUY"
 
-    else if finalScore <= 30
+    else if score <= 15 and htfBearish
+        result := "STRONG SELL"
+
+    else if score <= 30
         result := "SELL"
 
     else
