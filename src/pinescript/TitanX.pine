@@ -88,6 +88,15 @@ groupOB = "Order Blocks"
 showOrderBlocks = input.bool(true, "Show Order Blocks", group = groupOB)
 
 obLookback = input.int(20, "Lookback", minval = 5, group = groupOB)
+//=============================================================================
+// PREMIUM / DISCOUNT
+//=============================================================================
+
+groupPD = "Premium / Discount"
+
+showPDZones = input.bool(true, "Show Premium/Discount", group = groupPD)
+
+pdLookback = input.int(100, "Swing Lookback", minval = 20, group = groupPD)
 
 //=============================================================================
 // ASSET DETECTION
@@ -210,6 +219,17 @@ var float bearOBHigh = na
 var float bearOBLow = na
 
 var float orderBlockScore = 0.0
+//=============================================================================
+// PREMIUM / DISCOUNT VARIABLES
+//=============================================================================
+
+var float premiumLevel = na
+var float equilibriumLevel = na
+var float discountLevel = na
+
+var string pdState = "UNKNOWN"
+
+var float pdScore = 0.0
 
 //=============================================================================
 // BOS / CHOCH
@@ -232,7 +252,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,30)
+var table dashboard = table.new(position.top_right,2,33)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -341,6 +361,15 @@ table.cell(dashboard,1,28,bearOB ? "YES" : "-")
 
 table.cell(dashboard,0,29,"OB Score")
 table.cell(dashboard,1,29,str.tostring(math.round(orderBlockScore)))
+
+table.cell(dashboard,0,30,"PD Zone")
+table.cell(dashboard,1,30,pdState)
+
+table.cell(dashboard,0,31,"PD Score")
+table.cell(dashboard,1,31,str.tostring(math.round(pdScore)))
+
+table.cell(dashboard,0,32,"EQ")
+table.cell(dashboard,1,32,str.tostring(math.round(equilibriumLevel)))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -824,6 +853,31 @@ if ta.highest(high, obLookback) == high and close < open
             low,
             bgcolor = color.new(color.red, 85),
             border_color = color.red)
+            //=============================================================================
+// PREMIUM / DISCOUNT ENGINE
+//=============================================================================
+
+swingHigh = ta.highest(high, pdLookback)
+swingLow  = ta.lowest(low, pdLookback)
+
+priceRange = swingHigh - swingLow
+
+premiumLevel := swingLow + priceRange * 0.75
+equilibriumLevel := swingLow + priceRange * 0.50
+discountLevel := swingLow + priceRange * 0.25
+pdScore := 50
+
+if close >= premiumLevel
+    pdState := "PREMIUM"
+    pdScore := 0
+
+else if close <= discountLevel
+    pdState := "DISCOUNT"
+    pdScore := 100
+
+else
+    pdState := "EQUILIBRIUM"
+    pdScore := 50
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
@@ -865,3 +919,14 @@ plot(ema20,"EMA20",color=color.orange,linewidth=2)
 plot(ema50,"EMA50",color=color.blue)
 plot(ema100,"EMA100",color=color.green)
 plot(ema200,"EMA200",color=color.red)
+plot(showPDZones ? premiumLevel : na,
+     title = "Premium",
+     color = color.red)
+
+plot(showPDZones ? equilibriumLevel : na,
+     title = "Equilibrium",
+     color = color.yellow)
+
+plot(showPDZones ? discountLevel : na,
+     title = "Discount",
+     color = color.green)
