@@ -294,6 +294,15 @@ var float takeProfit2 = na
 var float takeProfit3 = na
 
 var float riskReward = na
+//=====================================================
+// ENTRY EXECUTION ENGINE
+//=====================================================
+
+var bool tradeReady = false
+
+var float entryPrice = na
+
+var string executionStatus = "WAIT"
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -479,6 +488,14 @@ table.cell(dashboard,1,46,str.tostring(takeProfit3))
 
 table.cell(dashboard,0,47,"R:R")
 table.cell(dashboard,1,47,"1:"+str.tostring(riskReward))
+table.cell(dashboard,0,48,"Entry")
+table.cell(dashboard,1,48,str.tostring(entryPrice))
+
+table.cell(dashboard,0,49,"Execution")
+table.cell(dashboard,1,49,executionStatus)
+
+table.cell(dashboard,0,50,"Trade Ready")
+table.cell(dashboard,1,50,tradeReady ? "YES" : "NO")
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -1224,6 +1241,35 @@ if allowShort
     takeProfit3 := close - risk * 3
 
     riskReward := 3
+    //=====================================================
+// ENTRY EXECUTION ENGINE
+//=====================================================
+
+tradeReady := false
+
+executionStatus := "WAIT"
+
+entryPrice := na
+
+if allowLong
+
+    if finalScore >= 80
+
+        tradeReady := true
+
+        executionStatus := "BUY READY"
+
+        entryPrice := close
+
+if allowShort
+
+    if finalScore <= 25
+
+        tradeReady := true
+
+        executionStatus := "SELL READY"
+
+        entryPrice := close
 //----------------------------------------------------
 // Trade Grade
 //----------------------------------------------------
