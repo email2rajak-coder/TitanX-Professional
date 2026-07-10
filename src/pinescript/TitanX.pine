@@ -122,6 +122,38 @@ var float equalLowPrice = na
 
 var float liquidityScore = 0.0
 //=============================================================================
+// LIQUIDITY SWEEP VARIABLES
+//=============================================================================
+
+var bool bullSweep = false
+var bool bearSweep = false
+
+var float lastSweepPrice = na
+
+var float sweepScore = 0.0
+//=============================================================================
+// CONFLUENCE ENGINE
+//=============================================================================
+
+var float confluenceScore = 0.0
+var string marketBias = "NEUTRAL"
+
+var bool trendAligned = false
+var bool structureAligned = false
+var bool liquidityAligned = false
+
+//=============================================================================
+// CONFLUENCE VARIABLES
+//=============================================================================
+
+var float confluenceScore = 0.0
+
+var string marketBias = "NEUTRAL"
+
+var bool trendAligned = false
+var bool structureAligned = false
+var bool liquidityAligned = false
+//=============================================================================
 // LIQUIDITY SWEEP
 //=============================================================================
 
@@ -500,6 +532,56 @@ if eqLowDetected
                  style = label.style_label_up,
                  color = color.lime,
                  textcolor = color.black)
+                 //=============================================================================
+// CONFLUENCE ENGINE
+//=============================================================================
+
+confluenceScore := 0
+
+//----------------------------------------------------
+// Trend
+//----------------------------------------------------
+
+trendAligned := trendScore >= 70
+
+if trendAligned
+    confluenceScore += 30
+
+//----------------------------------------------------
+// Structure
+//----------------------------------------------------
+
+structureAligned :=
+     structureDirection == "HH" or
+     structureDirection == "HL"
+
+if structureAligned
+    confluenceScore += 30
+
+//----------------------------------------------------
+// Liquidity
+//----------------------------------------------------
+
+liquidityAligned :=
+     bullSweep or
+     bearSweep or
+     eqHighDetected or
+     eqLowDetected
+
+if liquidityAligned
+    confluenceScore += 40
+
+//----------------------------------------------------
+// Market Bias
+//----------------------------------------------------
+
+marketBias := "NEUTRAL"
+
+if confluenceScore >= 80
+    marketBias := "BULLISH"
+
+else if confluenceScore <= 20
+    marketBias := "BEARISH"
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
