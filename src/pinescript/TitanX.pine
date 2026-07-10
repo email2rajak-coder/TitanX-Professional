@@ -497,19 +497,85 @@ calculateConfidence()=>
     float confidence = trendScore
 
     confidence
+    //==============================================================
+// FINAL SCORE ENGINE
+//==============================================================
+
+calculateFinalScore()=>
+
+    float finalScore = 0.0
+
+    //----------------------------------------------------------
+    // Trend (25%)
+    //----------------------------------------------------------
+    finalScore += math.max(trendScore,0) * 0.25
+
+    //----------------------------------------------------------
+    // Structure (15%)
+    //----------------------------------------------------------
+    finalScore += math.max(structureScore,0) * 0.15
+
+    //----------------------------------------------------------
+    // Liquidity (10%)
+    //----------------------------------------------------------
+    finalScore += math.max(liquidityScore,0) * 0.10
+
+    //----------------------------------------------------------
+    // Sweep (10%)
+    //----------------------------------------------------------
+    finalScore += math.max(sweepScore,0) * 0.10
+
+    //----------------------------------------------------------
+    // Higher Timeframe (10%)
+    //----------------------------------------------------------
+    finalScore += math.max(mtfScore,0) * 0.10
+
+    //----------------------------------------------------------
+    // Fair Value Gap (8%)
+    //----------------------------------------------------------
+    finalScore += math.max(fvgScore,0) * 0.08
+
+    //----------------------------------------------------------
+    // Order Block (7%)
+    //----------------------------------------------------------
+    finalScore += math.max(orderBlockScore,0) * 0.07
+
+    //----------------------------------------------------------
+    // Premium / Discount (5%)
+    //----------------------------------------------------------
+    finalScore += math.max(pdScore,0) * 0.05
+
+    //----------------------------------------------------------
+    // Session (5%)
+    //----------------------------------------------------------
+    finalScore += math.max(sessionScore,0) * 0.05
+
+    //----------------------------------------------------------
+    // Clamp
+    //----------------------------------------------------------
+    math.min(finalScore,100)
 
 //------------------------------------------------------------
 // Decision
 //------------------------------------------------------------
-calculateDecision()=>
+//==============================================================
+// SMART DECISION ENGINE
+//==============================================================
 
-    string result="WAIT"
+calculateSmartDecision()=>
 
-    if trendScore >=80
-        result:="BUY"
+    float finalScore = calculateFinalScore()
 
-    else if trendScore<=20
-        result:="SELL"
+    string result = "WAIT"
+
+    if finalScore >= 75
+        result := "BUY"
+
+    else if finalScore <= 30
+        result := "SELL"
+
+    else
+        result := "WAIT"
 
     result
 
@@ -1011,7 +1077,7 @@ trendScore := calculateTrend()
 
 confidenceScore := calculateConfidence()
 
-marketState := calculateDecision()
+marketState := calculateSmartDecision()
 
 if showDashboard and barstate.islast
     updateDashboard()
