@@ -262,6 +262,17 @@ var float sessionLow = na
 var string activeSession = "NONE"
 
 var float sessionScore = 0.0
+//==============================================================
+// SMART DECISION VARIABLES
+//==============================================================
+
+var float finalScore = 0.0
+
+var string tradeGrade = "N/A"
+
+var string entryQuality = "UNKNOWN"
+
+var string riskRating = "UNKNOWN"
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -554,6 +565,7 @@ calculateFinalScore()=>
     // Clamp
     //----------------------------------------------------------
     math.min(finalScore,100)
+    //==============================================================
 
 //------------------------------------------------------------
 // Decision
@@ -1076,6 +1088,46 @@ if structureDirection == "HH" and bearBOS
 trendScore := calculateTrend()
 
 confidenceScore := calculateConfidence()
+
+finalScore := calculateFinalScore()
+//----------------------------------------------------
+// Trade Grade
+//----------------------------------------------------
+
+if finalScore >= 90
+    tradeGrade := "A+"
+else if finalScore >= 80
+    tradeGrade := "A"
+else if finalScore >= 70
+    tradeGrade := "B"
+else if finalScore >= 60
+    tradeGrade := "C"
+else
+    tradeGrade := "D"
+
+//----------------------------------------------------
+// Entry Quality
+//----------------------------------------------------
+
+if finalScore >= 85
+    entryQuality := "EXCELLENT"
+else if finalScore >= 70
+    entryQuality := "GOOD"
+else if finalScore >= 50
+    entryQuality := "AVERAGE"
+else
+    entryQuality := "POOR"
+
+//----------------------------------------------------
+// Risk Rating
+//----------------------------------------------------
+
+if finalScore >= 85
+    riskRating := "LOW"
+else if finalScore >= 65
+    riskRating := "MEDIUM"
+else
+    riskRating := "HIGH"
 
 marketState := calculateSmartDecision()
 
