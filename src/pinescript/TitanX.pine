@@ -273,6 +273,12 @@ var string tradeGrade = "N/A"
 var string entryQuality = "UNKNOWN"
 
 var string riskRating = "UNKNOWN"
+//=====================================================
+// AI FILTER
+//=====================================================
+
+var bool allowLong = false
+var bool allowShort = false
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -600,16 +606,16 @@ calculateSmartDecision()=>
 
     string result = "WAIT"
 
-    if score >= 85 and htfBullish
+    if allowLong and score >= 85
         result := "STRONG BUY"
 
-    else if score >= 75
+    else if allowLong
         result := "BUY"
 
-    else if score <= 15 and htfBearish
+    else if allowShort and score <=15
         result := "STRONG SELL"
 
-    else if score <= 30
+    else if allowShort
         result := "SELL"
 
     else
@@ -1116,6 +1122,23 @@ trendScore := calculateTrend()
 confidenceScore := calculateConfidence()
 
 finalScore := calculateFinalScore()
+//-----------------------------------------------------
+// AI FILTER
+//-----------------------------------------------------
+
+allowLong :=
+     finalScore >= 75 and
+     trendScore >= 60 and
+     structureScore >= 60 and
+     liquidityScore >= 50 and
+     htfBullish
+
+allowShort :=
+     finalScore <= 30 and
+     trendScore <= 40 and
+     structureScore <= 40 and
+     liquidityScore >= 50 and
+     htfBearish
 //----------------------------------------------------
 // Trade Grade
 //----------------------------------------------------
