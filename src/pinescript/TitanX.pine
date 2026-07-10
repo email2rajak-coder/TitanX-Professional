@@ -113,6 +113,18 @@ sessionTimezone = input.string(
      options = ["Etc/UTC","Europe/London","America/New_York"],
      group = groupSession)
 
+dashboardPage = input.string(
+    "Summary",
+    "Dashboard Page",
+    options=[
+        "Summary",
+        "Structure",
+        "Smart Money",
+        "Execution",
+        "Statistics",
+        "Debug"
+    ]
+)
 //=============================================================================
 // ASSET DETECTION
 //=============================================================================
