@@ -121,6 +121,16 @@ var float equalHighPrice = na
 var float equalLowPrice = na
 
 var float liquidityScore = 0.0
+//=============================================================================
+// LIQUIDITY SWEEP
+//=============================================================================
+
+var bool bullSweep = false
+var bool bearSweep = false
+
+var float lastSweepPrice = na
+
+var float sweepScore = 0.0
 
 //=============================================================================
 // BOS / CHOCH
@@ -143,7 +153,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,15)
+var table dashboard = table.new(position.top_right,2,18)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -209,6 +219,14 @@ table.cell(dashboard,1,13,eqLowDetected ? "YES" : "NO")
 
 table.cell(dashboard,0,14,"Liquidity")
 table.cell(dashboard,1,14,str.tostring(liquidityScore))
+table.cell(dashboard,0,15,"Bull Sweep")
+table.cell(dashboard,1,15,bullSweep ? "YES" : "-")
+
+table.cell(dashboard,0,16,"Bear Sweep")
+table.cell(dashboard,1,16,bearSweep ? "YES" : "-")
+
+table.cell(dashboard,0,17,"Sweep Score")
+table.cell(dashboard,1,17,str.tostring(math.round(sweepScore)))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -432,6 +450,56 @@ if not na(lastSwingLow) and not na(previousSwingLow)
                  style = label.style_label_up,
                  color = color.orange,
                  textcolor = color.white)
+                 //=============================================================================
+// LIQUIDITY SWEEP ENGINE
+//=============================================================================
+
+bullSweep := false
+bearSweep := false
+
+//------------------------------------
+// Bearish Sweep
+//------------------------------------
+
+if eqHighDetected
+
+    if high > equalHighPrice and close < equalHighPrice
+
+        bearSweep := true
+        lastSweepPrice := high
+
+        sweepScore := math.min(sweepScore + 40, 100)
+
+        if showLiquidityLabels
+            label.new(
+                 bar_index,
+                 high,
+                 "Bear Sweep",
+                 style = label.style_label_down,
+                 color = color.red,
+                 textcolor = color.white)
+
+//------------------------------------
+// Bullish Sweep
+//------------------------------------
+
+if eqLowDetected
+
+    if low < equalLowPrice and close > equalLowPrice
+
+        bullSweep := true
+        lastSweepPrice := low
+
+        sweepScore := math.min(sweepScore + 40, 100)
+
+        if showLiquidityLabels
+            label.new(
+                 bar_index,
+                 low,
+                 "Bull Sweep",
+                 style = label.style_label_up,
+                 color = color.lime,
+                 textcolor = color.black)
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
