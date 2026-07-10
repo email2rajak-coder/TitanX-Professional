@@ -279,6 +279,11 @@ var string riskRating = "UNKNOWN"
 
 var bool allowLong = false
 var bool allowShort = false
+//=====================================================
+// TRADE QUALITY ENGINE
+//=====================================================
+
+var string tradeQuality = "UNKNOWN"
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -300,7 +305,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,42)
+var table dashboard = table.new(position.top_right,2,43)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -446,6 +451,9 @@ table.cell(dashboard,1,40,entryQuality)
 
 table.cell(dashboard,0,41,"Risk")
 table.cell(dashboard,1,41,riskRating)
+
+table.cell(dashboard,0,42,"Trade Quality")
+table.cell(dashboard,1,42,tradeQuality)
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -1122,6 +1130,27 @@ trendScore := calculateTrend()
 confidenceScore := calculateConfidence()
 
 finalScore := calculateFinalScore()
+//-----------------------------------------------------
+// TRADE QUALITY
+//-----------------------------------------------------
+
+if finalScore >= 95
+    tradeQuality := "⭐ PLATINUM"
+
+else if finalScore >= 90
+    tradeQuality := "🟢 A+"
+
+else if finalScore >= 80
+    tradeQuality := "🔵 A"
+
+else if finalScore >= 70
+    tradeQuality := "🟡 B"
+
+else if finalScore >= 60
+    tradeQuality := "🟠 C"
+
+else
+    tradeQuality := "🔴 AVOID"
 //-----------------------------------------------------
 // AI FILTER
 //-----------------------------------------------------
