@@ -97,6 +97,21 @@ groupPD = "Premium / Discount"
 showPDZones = input.bool(true, "Show Premium/Discount", group = groupPD)
 
 pdLookback = input.int(100, "Swing Lookback", minval = 20, group = groupPD)
+//=============================================================================
+// SESSION ENGINE
+//=============================================================================
+
+groupSession = "Session"
+
+showSessions = input.bool(true, "Show Sessions", group = groupSession)
+
+showKillZones = input.bool(true, "Show Kill Zones", group = groupSession)
+
+sessionTimezone = input.string(
+     "Etc/UTC",
+     "Timezone",
+     options = ["Etc/UTC","Europe/London","America/New_York"],
+     group = groupSession)
 
 //=============================================================================
 // ASSET DETECTION
@@ -230,7 +245,23 @@ var float discountLevel = na
 var string pdState = "UNKNOWN"
 
 var float pdScore = 0.0
+//=============================================================================
+// SESSION VARIABLES
+//=============================================================================
 
+var bool asianSession = false
+var bool londonSession = false
+var bool newYorkSession = false
+
+var bool londonKillZone = false
+var bool newYorkKillZone = false
+
+var float sessionHigh = na
+var float sessionLow = na
+
+var string activeSession = "NONE"
+
+var float sessionScore = 0.0
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -252,7 +283,7 @@ percent(a,b)=>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,33)
+var table dashboard = table.new(position.top_right,2,38)
 getTrendDirection() =>
 
     string dir = "NEUTRAL"
@@ -370,6 +401,23 @@ table.cell(dashboard,1,31,str.tostring(math.round(pdScore)))
 
 table.cell(dashboard,0,32,"EQ")
 table.cell(dashboard,1,32,str.tostring(math.round(equilibriumLevel)))
+
+table.cell(dashboard,0,33,"Session")
+table.cell(dashboard,1,33,activeSession)
+
+table.cell(dashboard,0,34,"Kill Zone")
+table.cell(dashboard,1,34,
+     londonKillZone ? "LONDON" :
+     newYorkKillZone ? "NEW YORK" : "-")
+
+table.cell(dashboard,0,35,"Session High")
+table.cell(dashboard,1,35,str.tostring(sessionHigh))
+
+table.cell(dashboard,0,36,"Session Low")
+table.cell(dashboard,1,36,str.tostring(sessionLow))
+
+table.cell(dashboard,0,37,"Session Score")
+table.cell(dashboard,1,37,str.tostring(math.round(sessionScore)))
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -878,6 +926,59 @@ else if close <= discountLevel
 else
     pdState := "EQUILIBRIUM"
     pdScore := 50
+    //=============================================================================
+// SESSION DETECTION
+//=============================================================================
+
+currentHour = hour(time, sessionTimezone)
+
+asianSession := currentHour >= 0 and currentHour < 8
+
+londonSession := currentHour >= 8 and currentHour < 16
+
+newYorkSession := currentHour >= 13 and currentHour < 22
+
+londonKillZone := currentHour >= 8 and currentHour < 10
+
+newYorkKillZone := currentHour >= 13 and currentHour < 16
+
+activeSession := "NONE"
+
+if asianSession
+    activeSession := "ASIA"
+
+if londonSession
+    activeSession := "LONDON"
+
+if newYorkSession
+    activeSession := "NEW YORK"
+    // Session High Low
+
+if activeSession != activeSession[1]
+
+    sessionHigh := high
+    sessionLow := low
+
+else
+
+    sessionHigh := math.max(sessionHigh, high)
+    sessionLow := math.min(sessionLow, low)
+    sessionScore := 50
+
+if londonKillZone
+    sessionScore := 100
+
+else if newYorkKillZone
+    sessionScore := 95
+
+else if londonSession
+    sessionScore := 80
+
+else if newYorkSession
+    sessionScore := 75
+
+else if asianSession
+    sessionScore := 40
 //=============================================================================
 // BREAK OF STRUCTURE
 //=============================================================================
@@ -930,3 +1031,10 @@ plot(showPDZones ? equilibriumLevel : na,
 plot(showPDZones ? discountLevel : na,
      title = "Discount",
      color = color.green)
+plot(showSessions ? sessionHigh : na,
+     title="Session High",
+     color=color.green)
+
+plot(showSessions ? sessionLow : na,
+     title="Session Low",
+     color=color.red)
