@@ -41,14 +41,15 @@ groupDashboard = "Dashboard"
 dashboardPage = input.string(
     "SUMMARY",
     "Dashboard Page",
-    options=[
+    options = [
         "SUMMARY",
+        "STRUCTURE",
         "SMART MONEY",
         "EXECUTION",
         "STATISTICS",
         "DEBUG"
     ],
-    group=groupDashboard)
+    group = groupDashboard)
 //=============================================================================
 // STRUCTURE INPUTS
 //=============================================================================
@@ -343,7 +344,13 @@ percent(a, b) =>
 // DASHBOARD
 //=============================================================================
 
-var table dashboard = table.new(position.top_right,2,70)
+var table dashboard = table.new(
+     position.top_right,
+     2,
+     32,
+     bgcolor=color.new(color.black,15),
+     frame_color=color.gray,
+     frame_width=1)
 
 getTrendDirection() =>
     string dir = ""
@@ -366,7 +373,7 @@ getTrendDirection() =>
     dir
 
 drawSummary() =>
-    table.clear(dashboard, 0, 0, 1, 69)
+    table.clear(dashboard, 0, 0, 1, 31)
 
     table.cell(dashboard, 0, 0, "TITAN X")
     table.cell(dashboard, 1, 0, TITAN_VERSION)
@@ -517,12 +524,47 @@ drawSummary() =>
 
     table.cell(dashboard,0,50,"Trade Ready")
     table.cell(dashboard,1,50,tradeReady ? "YES" : "NO")
+
+drawStructure() =>
+    table.clear(dashboard, 0, 0, 1, 31)
+    table.cell(dashboard,0,0,"STRUCTURE")
+
+drawSmartMoney() =>
+    table.clear(dashboard, 0, 0, 1, 31)
+    table.cell(dashboard,0,0,"SMART MONEY")
+
+drawExecution() =>
+    table.clear(dashboard, 0, 0, 1, 31)
+    table.cell(dashboard,0,0,"EXECUTION")
+
+drawStatistics() =>
+    table.clear(dashboard, 0, 0, 1, 31)
+    table.cell(dashboard,0,0,"STATISTICS")
+
+drawDebug() =>
+    table.clear(dashboard, 0, 0, 1, 31)
+    table.cell(dashboard,0,0,"DEBUG")
+
 updateDashboard() =>
 
     if dashboardPage == "SUMMARY"
         drawSummary()
 
-    
+    else if dashboardPage == "STRUCTURE"
+        drawStructure()
+
+    else if dashboardPage == "SMART MONEY"
+        drawSmartMoney()
+
+    else if dashboardPage == "EXECUTION"
+        drawExecution()
+
+    else if dashboardPage == "STATISTICS"
+        drawStatistics()
+
+    else
+        drawDebug()
+   
 //=============================================================================
 // LOGGER
 //=============================================================================
