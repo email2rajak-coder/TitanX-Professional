@@ -327,19 +327,20 @@ var float previousSwingLow  = na
 //=============================================================================
 
 roundPrice(price) =>
-    math.round(price / syminfo.mintick) * syminfo.mintick
+    float result = math.round(price / syminfo.mintick) * syminfo.mintick
+    result
 
-percent(a,b)=>
-    b == 0 ? 0 : (a/b)*100
-
+percent(a, b) =>
+    float result = b == 0 ? 0.0 : (a / b) * 100.0
+    result
 //=============================================================================
 // DASHBOARD
 //=============================================================================
 
 var table dashboard = table.new(position.top_right,2,70)
-getTrendDirection() =>
 
-    string dir = "NEUTRAL"
+getTrendDirection() =>
+    string dir = ""
 
     if trendScore >= 90
         dir := "ULTRA BULL"
@@ -357,7 +358,9 @@ getTrendDirection() =>
         dir := "ULTRA BEAR"
 
     dir
-updateDashboard() =>
+
+drawSummary() =>
+    table.clear(dashboard, 0, 0, 1, 69)
 
     table.cell(dashboard, 0, 0, "TITAN X")
     table.cell(dashboard, 1, 0, TITAN_VERSION)
@@ -387,127 +390,133 @@ updateDashboard() =>
     table.cell(dashboard, 1, 8, str.tostring(math.round(structureScore)))
 
     table.cell(dashboard,0,9,"BOS")
-table.cell(dashboard,1,9,bullBOS ? "BULL" : bearBOS ? "BEAR" : "-")
+    table.cell(dashboard,1,9,bullBOS ? "BULL" : bearBOS ? "BEAR" : "-")
 
-table.cell(dashboard,0,10,"CHOCH")
-table.cell(dashboard,1,10,bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-")
+    table.cell(dashboard,0,10,"CHOCH")
+    table.cell(dashboard,1,10,bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-")
 
-table.cell(dashboard,0,11,"Build")
-table.cell(dashboard,1,11,TITAN_BUILD)
-table.cell(dashboard,0,12,"EQH")
-table.cell(dashboard,1,12,eqHighDetected ? "YES" : "NO")
+    table.cell(dashboard,0,11,"Build")
+    table.cell(dashboard,1,11,TITAN_BUILD)
+    table.cell(dashboard,0,12,"EQH")
+    table.cell(dashboard,1,12,eqHighDetected ? "YES" : "NO")
 
-table.cell(dashboard,0,13,"EQL")
-table.cell(dashboard,1,13,eqLowDetected ? "YES" : "NO")
+    table.cell(dashboard,0,13,"EQL")
+    table.cell(dashboard,1,13,eqLowDetected ? "YES" : "NO")
 
-table.cell(dashboard,0,14,"Liquidity")
-table.cell(dashboard,1,14,str.tostring(liquidityScore))
-table.cell(dashboard,0,15,"Bull Sweep")
-table.cell(dashboard,1,15,bullSweep ? "YES" : "-")
+    table.cell(dashboard,0,14,"Liquidity")
+    table.cell(dashboard,1,14,str.tostring(liquidityScore))
+    table.cell(dashboard,0,15,"Bull Sweep")
+    table.cell(dashboard,1,15,bullSweep ? "YES" : "-")
 
-table.cell(dashboard,0,16,"Bear Sweep")
-table.cell(dashboard,1,16,bearSweep ? "YES" : "-")
+    table.cell(dashboard,0,16,"Bear Sweep")
+    table.cell(dashboard,1,16,bearSweep ? "YES" : "-")
 
-table.cell(dashboard,0,17,"Sweep Score")
-table.cell(dashboard,1,17,str.tostring(math.round(sweepScore)))
-table.cell(dashboard,0,18,"Bias")
-table.cell(dashboard,1,18,marketBias)
+    table.cell(dashboard,0,17,"Sweep Score")
+    table.cell(dashboard,1,17,str.tostring(math.round(sweepScore)))
+    table.cell(dashboard,0,18,"Bias")
+    table.cell(dashboard,1,18,marketBias)
 
-table.cell(dashboard,0,19,"Confluence")
-table.cell(dashboard,1,19,str.tostring(math.round(confluenceScore)))
+    table.cell(dashboard,0,19,"Confluence")
+    table.cell(dashboard,1,19,str.tostring(math.round(confluenceScore)))
 
-table.cell(dashboard,0,20,"Ready")
-table.cell(dashboard, 1, 20, confluenceScore >= 80 ? "YES" : "WAIT")
+    table.cell(dashboard,0,20,"Ready")
+    table.cell(dashboard, 1, 20, confluenceScore >= 80 ? "YES" : "WAIT")
 
-table.cell(dashboard,0,21,"HTF Trend")
-table.cell(dashboard,1,21,htfTrend)
+    table.cell(dashboard,0,21,"HTF Trend")
+    table.cell(dashboard,1,21,htfTrend)
 
-table.cell(dashboard,0,22,"MTF Score")
-table.cell(dashboard,1,22,str.tostring(math.round(mtfScore)))
+    table.cell(dashboard,0,22,"MTF Score")
+    table.cell(dashboard,1,22,str.tostring(math.round(mtfScore)))
 
-table.cell(dashboard,0,23,"MTF Align")
-table.cell(dashboard,1,23,mtfScore >= 50 ? "YES" : "NO")
+    table.cell(dashboard,0,23,"MTF Align")
+    table.cell(dashboard,1,23,mtfScore >= 50 ? "YES" : "NO")
 
-table.cell(dashboard,0,24,"Bull FVG")
-table.cell(dashboard,1,24,bullFVG ? "YES" : "-")
+    table.cell(dashboard,0,24,"Bull FVG")
+    table.cell(dashboard,1,24,bullFVG ? "YES" : "-")
 
-table.cell(dashboard,0,25,"Bear FVG")
-table.cell(dashboard,1,25,bearFVG ? "YES" : "-")
+    table.cell(dashboard,0,25,"Bear FVG")
+    table.cell(dashboard,1,25,bearFVG ? "YES" : "-")
 
-table.cell(dashboard,0,26,"FVG Score")
-table.cell(dashboard,1,26,str.tostring(math.round(fvgScore)))
+    table.cell(dashboard,0,26,"FVG Score")
+    table.cell(dashboard,1,26,str.tostring(math.round(fvgScore)))
 
-table.cell(dashboard,0,27,"Bull OB")
-table.cell(dashboard,1,27,bullOB ? "YES" : "-")
+    table.cell(dashboard,0,27,"Bull OB")
+    table.cell(dashboard,1,27,bullOB ? "YES" : "-")
 
-table.cell(dashboard,0,28,"Bear OB")
-table.cell(dashboard,1,28,bearOB ? "YES" : "-")
+    table.cell(dashboard,0,28,"Bear OB")
+    table.cell(dashboard,1,28,bearOB ? "YES" : "-")
 
-table.cell(dashboard,0,29,"OB Score")
-table.cell(dashboard,1,29,str.tostring(math.round(orderBlockScore)))
+    table.cell(dashboard,0,29,"OB Score")
+    table.cell(dashboard,1,29,str.tostring(math.round(orderBlockScore)))
 
-table.cell(dashboard,0,30,"PD Zone")
-table.cell(dashboard,1,30,pdState)
+    table.cell(dashboard,0,30,"PD Zone")
+    table.cell(dashboard,1,30,pdState)
 
-table.cell(dashboard,0,31,"PD Score")
-table.cell(dashboard,1,31,str.tostring(math.round(pdScore)))
+    table.cell(dashboard,0,31,"PD Score")
+    table.cell(dashboard,1,31,str.tostring(math.round(pdScore)))
 
-table.cell(dashboard,0,32,"EQ")
-table.cell(dashboard,1,32,str.tostring(math.round(equilibriumLevel)))
+    table.cell(dashboard,0,32,"EQ")
+    table.cell(dashboard,1,32,str.tostring(math.round(equilibriumLevel)))
 
-table.cell(dashboard,0,33,"Session")
-table.cell(dashboard,1,33,activeSession)
+    table.cell(dashboard,0,33,"Session")
+    table.cell(dashboard,1,33,activeSession)
 
-table.cell(dashboard,0,34,"Kill Zone")
-table.cell(dashboard,1,34,
-     londonKillZone ? "LONDON" :
-     newYorkKillZone ? "NEW YORK" : "-")
+    table.cell(dashboard,0,34,"Kill Zone")
+    table.cell(dashboard,1,34,
+        londonKillZone ? "LONDON" :
+        newYorkKillZone ? "NEW YORK" : "-")
 
-table.cell(dashboard,0,35,"Session High")
-table.cell(dashboard,1,35,str.tostring(sessionHigh))
+    table.cell(dashboard,0,35,"Session High")
+    table.cell(dashboard,1,35,str.tostring(sessionHigh))
 
-table.cell(dashboard,0,36,"Session Low")
-table.cell(dashboard,1,36,str.tostring(sessionLow))
+    table.cell(dashboard,0,36,"Session Low")
+    table.cell(dashboard,1,36,str.tostring(sessionLow))
 
-table.cell(dashboard,0,37,"Session Score")
-table.cell(dashboard,1,37,str.tostring(math.round(sessionScore)))
-table.cell(dashboard,0,38,"Confidence")
-table.cell(dashboard,1,38,str.tostring(math.round(confidenceScore)) + "%")
+    table.cell(dashboard,0,37,"Session Score")
+    table.cell(dashboard,1,37,str.tostring(math.round(sessionScore)))
+    table.cell(dashboard,0,38,"Confidence")
+    table.cell(dashboard,1,38,str.tostring(math.round(confidenceScore)) + "%")
 
-table.cell(dashboard,0,39,"Grade")
-table.cell(dashboard,1,39,tradeGrade)
+    table.cell(dashboard,0,39,"Grade")
+    table.cell(dashboard,1,39,tradeGrade)
 
-table.cell(dashboard,0,40,"Entry")
-table.cell(dashboard,1,40,entryQuality)
+    table.cell(dashboard,0,40,"Entry")
+    table.cell(dashboard,1,40,entryQuality)
 
-table.cell(dashboard,0,41,"Risk")
-table.cell(dashboard,1,41,riskRating)
+    table.cell(dashboard,0,41,"Risk")
+    table.cell(dashboard,1,41,riskRating)
 
-table.cell(dashboard,0,42,"Trade Quality")
-table.cell(dashboard,1,42,tradeQuality)
+    table.cell(dashboard,0,42,"Trade Quality")
+    table.cell(dashboard,1,42,tradeQuality)
 
-table.cell(dashboard,0,43,"SL")
-table.cell(dashboard,1,43,str.tostring(stopLoss))
+    table.cell(dashboard,0,43,"SL")
+    table.cell(dashboard,1,43,str.tostring(stopLoss))
 
-table.cell(dashboard,0,44,"TP1")
-table.cell(dashboard,1,44,str.tostring(takeProfit1))
+    table.cell(dashboard,0,44,"TP1")
+    table.cell(dashboard,1,44,str.tostring(takeProfit1))
 
-table.cell(dashboard,0,45,"TP2")
-table.cell(dashboard,1,45,str.tostring(takeProfit2))
+    table.cell(dashboard,0,45,"TP2")
+    table.cell(dashboard,1,45,str.tostring(takeProfit2))
 
-table.cell(dashboard,0,46,"TP3")
-table.cell(dashboard,1,46,str.tostring(takeProfit3))
+    table.cell(dashboard,0,46,"TP3")
+    table.cell(dashboard,1,46,str.tostring(takeProfit3))
 
-table.cell(dashboard,0,47,"R:R")
-table.cell(dashboard,1,47,"1:"+str.tostring(riskReward))
-table.cell(dashboard,0,48,"Entry")
-table.cell(dashboard,1,48,str.tostring(entryPrice))
+    table.cell(dashboard,0,47,"R:R")
+    table.cell(dashboard,1,47,"1:"+str.tostring(riskReward))
+    table.cell(dashboard,0,48,"Entry")
+    table.cell(dashboard,1,48,str.tostring(entryPrice))
 
-table.cell(dashboard,0,49,"Execution")
-table.cell(dashboard,1,49,executionStatus)
+    table.cell(dashboard,0,49,"Execution")
+    table.cell(dashboard,1,49,executionStatus)
 
-table.cell(dashboard,0,50,"Trade Ready")
-table.cell(dashboard,1,50,tradeReady ? "YES" : "NO")
+    table.cell(dashboard,0,50,"Trade Ready")
+    table.cell(dashboard,1,50,tradeReady ? "YES" : "NO")
+updateDashboard() =>
+
+    if dashboardPage == "Summary"
+        drawSummary()
+
+    
 //=============================================================================
 // LOGGER
 //=============================================================================
