@@ -32,6 +32,23 @@ groupGeneral = "General"
 
 showDashboard = input.bool(true, "Show Dashboard", group = groupGeneral)
 debugMode     = input.bool(false, "Debug Mode", group = groupGeneral)
+//==================================================
+// DASHBOARD
+//==================================================
+
+groupDashboard = "Dashboard"
+
+dashboardPage = input.string(
+    "SUMMARY",
+    "Dashboard Page",
+    options=[
+        "SUMMARY",
+        "SMART MONEY",
+        "EXECUTION",
+        "STATISTICS",
+        "DEBUG"
+    ],
+    group=groupDashboard)
 //=============================================================================
 // STRUCTURE INPUTS
 //=============================================================================
@@ -113,18 +130,7 @@ sessionTimezone = input.string(
      options = ["Etc/UTC","Europe/London","America/New_York"],
      group = groupSession)
 
-dashboardPage = input.string(
-    "Summary",
-    "Dashboard Page",
-    options=[
-        "Summary",
-        "Structure",
-        "Smart Money",
-        "Execution",
-        "Statistics",
-        "Debug"
-    ]
-)
+
 //=============================================================================
 // ASSET DETECTION
 //=============================================================================
@@ -513,7 +519,7 @@ drawSummary() =>
     table.cell(dashboard,1,50,tradeReady ? "YES" : "NO")
 updateDashboard() =>
 
-    if dashboardPage == "Summary"
+    if dashboardPage == "SUMMARY"
         drawSummary()
 
     
