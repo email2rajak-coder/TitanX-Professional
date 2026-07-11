@@ -347,203 +347,292 @@ percent(a, b) =>
 var table dashboard = table.new(
      position.top_right,
      2,
-     32,
-     bgcolor=color.new(color.black,15),
+     16,
+     bgcolor=color.new(#1a1c2c, 0),
      frame_color=color.gray,
      frame_width=1)
 
 getTrendDirection() =>
+
     string dir = ""
 
     if trendScore >= 90
         dir := "ULTRA BULL"
+
     else if trendScore >= 75
         dir := "STRONG BULL"
+
     else if trendScore >= 60
         dir := "BULL"
+
     else if trendScore >= 40
         dir := "NEUTRAL"
+
     else if trendScore >= 25
         dir := "BEAR"
+
     else if trendScore >= 10
         dir := "STRONG BEAR"
+
     else
         dir := "ULTRA BEAR"
 
     dir
 
+//---------------------------------------------------------
+
+clearDashboard() =>
+    table.clear(dashboard,0,0,1,15)
+
+//---------------------------------------------------------
+// PAGE 1: SUMMARY -- quick top-level read
+//---------------------------------------------------------
+
 drawSummary() =>
-    table.clear(dashboard, 0, 0, 1, 31)
+    clearDashboard()
 
-    table.cell(dashboard, 0, 0, "TITAN X")
-    table.cell(dashboard, 1, 0, TITAN_VERSION)
+    table.cell(dashboard, 0, 0, "TITAN X — SUMMARY", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(dashboard, 1, 0, TITAN_VERSION, text_color=color.white, bgcolor=color.new(#2962ff, 0))
 
-    table.cell(dashboard, 0, 1, "Symbol")
-    table.cell(dashboard, 1, 1, symbolName)
+    table.cell(dashboard, 0, 1, "Symbol", text_color=color.white)
+    table.cell(dashboard, 1, 1, symbolName, text_color=color.white)
 
-    table.cell(dashboard, 0, 2, "TF")
-    table.cell(dashboard, 1, 2, timeframeName)
+    table.cell(dashboard, 0, 2, "TF / Asset", text_color=color.white)
+    table.cell(dashboard, 1, 2, timeframeName + " / " + assetType, text_color=color.white)
 
-    table.cell(dashboard, 0, 3, "Asset")
-    table.cell(dashboard, 1, 3, assetType)
+    table.cell(dashboard, 0, 3, "Trend", text_color=color.white)
+    table.cell(dashboard, 1, 3, getTrendDirection(), text_color=color.white)
 
-    table.cell(dashboard, 0, 4, "Trend")
-    table.cell(dashboard, 1, 4, getTrendDirection())
+    table.cell(dashboard, 0, 4, "Decision", text_color=color.white)
+    table.cell(dashboard, 1, 4, marketState, text_color=color.white)
 
-    table.cell(dashboard, 0, 5, "Score")
-    table.cell(dashboard, 1, 5, str.tostring(math.round(trendScore)))
+    table.cell(dashboard, 0, 5, "Bias", text_color=color.white)
+    table.cell(dashboard, 1, 5, marketBias, text_color=color.white)
 
-    table.cell(dashboard, 0, 6, "Decision")
-    table.cell(dashboard, 1, 6, marketState)
+    table.cell(dashboard, 0, 6, "Trade Quality", text_color=color.white)
+    table.cell(dashboard, 1, 6, tradeQuality, text_color=color.white)
 
-    table.cell(dashboard, 0, 7, "Structure")
-    table.cell(dashboard, 1, 7, structureDirection)
+    table.cell(dashboard, 0, 7, "Confidence", text_color=color.white)
+    table.cell(dashboard, 1, 7, str.tostring(math.round(confidenceScore)) + "%", text_color=color.white)
 
-    table.cell(dashboard, 0, 8, "Struct Score")
-    table.cell(dashboard, 1, 8, str.tostring(math.round(structureScore)))
+    table.cell(dashboard, 0, 8, "Grade", text_color=color.white)
+    table.cell(dashboard, 1, 8, tradeGrade, text_color=color.white)
 
-    table.cell(dashboard,0,9,"BOS")
-    table.cell(dashboard,1,9,bullBOS ? "BULL" : bearBOS ? "BEAR" : "-")
+    table.cell(dashboard, 0, 9, "Session", text_color=color.white)
+    table.cell(dashboard, 1, 9, activeSession, text_color=color.white)
 
-    table.cell(dashboard,0,10,"CHOCH")
-    table.cell(dashboard,1,10,bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-")
+    table.cell(dashboard, 0, 10, "Kill Zone", text_color=color.white)
+    table.cell(dashboard, 1, 10,
+         londonKillZone ? "LONDON" :
+         newYorkKillZone ? "NEW YORK" : "-", text_color=color.white)
 
-    table.cell(dashboard,0,11,"Build")
-    table.cell(dashboard,1,11,TITAN_BUILD)
-    table.cell(dashboard,0,12,"EQH")
-    table.cell(dashboard,1,12,eqHighDetected ? "YES" : "NO")
+    table.cell(dashboard, 0, 11, "Ready", text_color=color.white)
+    table.cell(dashboard, 1, 11, confluenceScore >= 80 ? "YES" : "WAIT", text_color=color.white)
 
-    table.cell(dashboard,0,13,"EQL")
-    table.cell(dashboard,1,13,eqLowDetected ? "YES" : "NO")
-
-    table.cell(dashboard,0,14,"Liquidity")
-    table.cell(dashboard,1,14,str.tostring(liquidityScore))
-    table.cell(dashboard,0,15,"Bull Sweep")
-    table.cell(dashboard,1,15,bullSweep ? "YES" : "-")
-
-    table.cell(dashboard,0,16,"Bear Sweep")
-    table.cell(dashboard,1,16,bearSweep ? "YES" : "-")
-
-    table.cell(dashboard,0,17,"Sweep Score")
-    table.cell(dashboard,1,17,str.tostring(math.round(sweepScore)))
-    table.cell(dashboard,0,18,"Bias")
-    table.cell(dashboard,1,18,marketBias)
-
-    table.cell(dashboard,0,19,"Confluence")
-    table.cell(dashboard,1,19,str.tostring(math.round(confluenceScore)))
-
-    table.cell(dashboard,0,20,"Ready")
-    table.cell(dashboard, 1, 20, confluenceScore >= 80 ? "YES" : "WAIT")
-
-    table.cell(dashboard,0,21,"HTF Trend")
-    table.cell(dashboard,1,21,htfTrend)
-
-    table.cell(dashboard,0,22,"MTF Score")
-    table.cell(dashboard,1,22,str.tostring(math.round(mtfScore)))
-
-    table.cell(dashboard,0,23,"MTF Align")
-    table.cell(dashboard,1,23,mtfScore >= 50 ? "YES" : "NO")
-
-    table.cell(dashboard,0,24,"Bull FVG")
-    table.cell(dashboard,1,24,bullFVG ? "YES" : "-")
-
-    table.cell(dashboard,0,25,"Bear FVG")
-    table.cell(dashboard,1,25,bearFVG ? "YES" : "-")
-
-    table.cell(dashboard,0,26,"FVG Score")
-    table.cell(dashboard,1,26,str.tostring(math.round(fvgScore)))
-
-    table.cell(dashboard,0,27,"Bull OB")
-    table.cell(dashboard,1,27,bullOB ? "YES" : "-")
-
-    table.cell(dashboard,0,28,"Bear OB")
-    table.cell(dashboard,1,28,bearOB ? "YES" : "-")
-
-    table.cell(dashboard,0,29,"OB Score")
-    table.cell(dashboard,1,29,str.tostring(math.round(orderBlockScore)))
-
-    table.cell(dashboard,0,30,"PD Zone")
-    table.cell(dashboard,1,30,pdState)
-
-    table.cell(dashboard,0,31,"PD Score")
-    table.cell(dashboard,1,31,str.tostring(math.round(pdScore)))
-
-    table.cell(dashboard,0,32,"EQ")
-    table.cell(dashboard,1,32,str.tostring(math.round(equilibriumLevel)))
-
-    table.cell(dashboard,0,33,"Session")
-    table.cell(dashboard,1,33,activeSession)
-
-    table.cell(dashboard,0,34,"Kill Zone")
-    table.cell(dashboard,1,34,
-        londonKillZone ? "LONDON" :
-        newYorkKillZone ? "NEW YORK" : "-")
-
-    table.cell(dashboard,0,35,"Session High")
-    table.cell(dashboard,1,35,str.tostring(sessionHigh))
-
-    table.cell(dashboard,0,36,"Session Low")
-    table.cell(dashboard,1,36,str.tostring(sessionLow))
-
-    table.cell(dashboard,0,37,"Session Score")
-    table.cell(dashboard,1,37,str.tostring(math.round(sessionScore)))
-    table.cell(dashboard,0,38,"Confidence")
-    table.cell(dashboard,1,38,str.tostring(math.round(confidenceScore)) + "%")
-
-    table.cell(dashboard,0,39,"Grade")
-    table.cell(dashboard,1,39,tradeGrade)
-
-    table.cell(dashboard,0,40,"Entry")
-    table.cell(dashboard,1,40,entryQuality)
-
-    table.cell(dashboard,0,41,"Risk")
-    table.cell(dashboard,1,41,riskRating)
-
-    table.cell(dashboard,0,42,"Trade Quality")
-    table.cell(dashboard,1,42,tradeQuality)
-
-    table.cell(dashboard,0,43,"SL")
-    table.cell(dashboard,1,43,str.tostring(stopLoss))
-
-    table.cell(dashboard,0,44,"TP1")
-    table.cell(dashboard,1,44,str.tostring(takeProfit1))
-
-    table.cell(dashboard,0,45,"TP2")
-    table.cell(dashboard,1,45,str.tostring(takeProfit2))
-
-    table.cell(dashboard,0,46,"TP3")
-    table.cell(dashboard,1,46,str.tostring(takeProfit3))
-
-    table.cell(dashboard,0,47,"R:R")
-    table.cell(dashboard,1,47,"1:"+str.tostring(riskReward))
-    table.cell(dashboard,0,48,"Entry")
-    table.cell(dashboard,1,48,str.tostring(entryPrice))
-
-    table.cell(dashboard,0,49,"Execution")
-    table.cell(dashboard,1,49,executionStatus)
-
-    table.cell(dashboard,0,50,"Trade Ready")
-    table.cell(dashboard,1,50,tradeReady ? "YES" : "NO")
+//---------------------------------------------------------
+// PAGE 2: STRUCTURE -- market structure / liquidity
+//---------------------------------------------------------
 
 drawStructure() =>
-    table.clear(dashboard, 0, 0, 1, 31)
-    table.cell(dashboard,0,0,"STRUCTURE")
+    clearDashboard()
+
+    table.cell(dashboard, 0, 0, "TITAN X — STRUCTURE", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+    table.cell(dashboard, 0, 1, "Structure", text_color=color.white)
+    table.cell(dashboard, 1, 1, structureDirection, text_color=color.white)
+
+    table.cell(dashboard, 0, 2, "Struct Score", text_color=color.white)
+    table.cell(dashboard, 1, 2, str.tostring(math.round(structureScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 3, "BOS", text_color=color.white)
+    table.cell(dashboard, 1, 3, bullBOS ? "BULL" : bearBOS ? "BEAR" : "-", text_color=color.white)
+
+    table.cell(dashboard, 0, 4, "CHOCH", text_color=color.white)
+    table.cell(dashboard, 1, 4, bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-", text_color=color.white)
+
+    table.cell(dashboard, 0, 5, "EQH / EQL", text_color=color.white)
+    table.cell(dashboard, 1, 5, (eqHighDetected ? "EQH " : "") + (eqLowDetected ? "EQL" : (eqHighDetected ? "" : "-")), text_color=color.white)
+
+    table.cell(dashboard, 0, 6, "Liquidity Score", text_color=color.white)
+    table.cell(dashboard, 1, 6, str.tostring(math.round(liquidityScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 7, "Sweep", text_color=color.white)
+    table.cell(dashboard, 1, 7, bullSweep ? "BULL" : bearSweep ? "BEAR" : "-", text_color=color.white)
+
+    table.cell(dashboard, 0, 8, "Sweep Score", text_color=color.white)
+    table.cell(dashboard, 1, 8, str.tostring(math.round(sweepScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 9, "Confluence", text_color=color.white)
+    table.cell(dashboard, 1, 9, str.tostring(math.round(confluenceScore)), text_color=color.white)
+
+//---------------------------------------------------------
+// PAGE 3: SMART MONEY -- FVG / OB / PD / HTF
+//---------------------------------------------------------
 
 drawSmartMoney() =>
-    table.clear(dashboard, 0, 0, 1, 31)
-    table.cell(dashboard,0,0,"SMART MONEY")
+    clearDashboard()
+
+    table.cell(dashboard, 0, 0, "TITAN X — SMART MONEY", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+    table.cell(dashboard, 0, 1, "Bull / Bear FVG", text_color=color.white)
+    table.cell(dashboard, 1, 1, (bullFVG ? "BULL " : "") + (bearFVG ? "BEAR" : (bullFVG ? "" : "-")), text_color=color.white)
+
+    table.cell(dashboard, 0, 2, "FVG Score", text_color=color.white)
+    table.cell(dashboard, 1, 2, str.tostring(math.round(fvgScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 3, "Bull / Bear OB", text_color=color.white)
+    table.cell(dashboard, 1, 3, (bullOB ? "BULL " : "") + (bearOB ? "BEAR" : (bullOB ? "" : "-")), text_color=color.white)
+
+    table.cell(dashboard, 0, 4, "OB Score", text_color=color.white)
+    table.cell(dashboard, 1, 4, str.tostring(math.round(orderBlockScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 5, "PD Zone", text_color=color.white)
+    table.cell(dashboard, 1, 5, pdState, text_color=color.white)
+
+    table.cell(dashboard, 0, 6, "PD Score", text_color=color.white)
+    table.cell(dashboard, 1, 6, str.tostring(math.round(pdScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 7, "Equilibrium", text_color=color.white)
+    table.cell(dashboard, 1, 7, str.tostring(math.round(equilibriumLevel)), text_color=color.white)
+
+    table.cell(dashboard, 0, 8, "HTF Trend", text_color=color.white)
+    table.cell(dashboard, 1, 8, htfTrend, text_color=color.white)
+
+    table.cell(dashboard, 0, 9, "MTF Score", text_color=color.white)
+    table.cell(dashboard, 1, 9, str.tostring(math.round(mtfScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 10, "MTF Align", text_color=color.white)
+    table.cell(dashboard, 1, 10, mtfScore >= 50 ? "YES" : "NO", text_color=color.white)
+
+//---------------------------------------------------------
+// PAGE 4: EXECUTION -- entries, SL/TP, allow flags
+//---------------------------------------------------------
 
 drawExecution() =>
-    table.clear(dashboard, 0, 0, 1, 31)
-    table.cell(dashboard,0,0,"EXECUTION")
+    clearDashboard()
+
+    table.cell(dashboard, 0, 0, "TITAN X — EXECUTION", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+    table.cell(dashboard, 0, 1, "Execution", text_color=color.white)
+    table.cell(dashboard, 1, 1, executionStatus, text_color=color.white)
+
+    table.cell(dashboard, 0, 2, "Trade Ready", text_color=color.white)
+    table.cell(dashboard, 1, 2, tradeReady ? "YES" : "NO", text_color=color.white)
+
+    table.cell(dashboard, 0, 3, "Allow Long/Short", text_color=color.white)
+    table.cell(dashboard, 1, 3, allowLong ? "LONG" : allowShort ? "SHORT" : "-", text_color=color.white)
+
+    table.cell(dashboard, 0, 4, "Entry", text_color=color.white)
+    table.cell(dashboard, 1, 4, str.tostring(entryPrice), text_color=color.white)
+
+    table.cell(dashboard, 0, 5, "SL", text_color=color.white)
+    table.cell(dashboard, 1, 5, str.tostring(stopLoss), text_color=color.white)
+
+    table.cell(dashboard, 0, 6, "TP1", text_color=color.white)
+    table.cell(dashboard, 1, 6, str.tostring(takeProfit1), text_color=color.white)
+
+    table.cell(dashboard, 0, 7, "TP2", text_color=color.white)
+    table.cell(dashboard, 1, 7, str.tostring(takeProfit2), text_color=color.white)
+
+    table.cell(dashboard, 0, 8, "TP3", text_color=color.white)
+    table.cell(dashboard, 1, 8, str.tostring(takeProfit3), text_color=color.white)
+
+    table.cell(dashboard, 0, 9, "R:R", text_color=color.white)
+    table.cell(dashboard, 1, 9, "1:" + str.tostring(riskReward), text_color=color.white)
+
+    table.cell(dashboard, 0, 10, "Entry Quality", text_color=color.white)
+    table.cell(dashboard, 1, 10, entryQuality, text_color=color.white)
+
+    table.cell(dashboard, 0, 11, "Risk Rating", text_color=color.white)
+    table.cell(dashboard, 1, 11, riskRating, text_color=color.white)
+
+//---------------------------------------------------------
+// PAGE 5: STATISTICS -- all scoring components + final score
+//---------------------------------------------------------
 
 drawStatistics() =>
-    table.clear(dashboard, 0, 0, 1, 31)
-    table.cell(dashboard,0,0,"STATISTICS")
+    clearDashboard()
+
+    table.cell(dashboard, 0, 0, "TITAN X — STATISTICS", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+    table.cell(dashboard, 0, 1, "Trend Score", text_color=color.white)
+    table.cell(dashboard, 1, 1, str.tostring(math.round(trendScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 2, "Structure Score", text_color=color.white)
+    table.cell(dashboard, 1, 2, str.tostring(math.round(structureScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 3, "Liquidity Score", text_color=color.white)
+    table.cell(dashboard, 1, 3, str.tostring(math.round(liquidityScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 4, "Sweep Score", text_color=color.white)
+    table.cell(dashboard, 1, 4, str.tostring(math.round(sweepScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 5, "MTF Score", text_color=color.white)
+    table.cell(dashboard, 1, 5, str.tostring(math.round(mtfScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 6, "FVG Score", text_color=color.white)
+    table.cell(dashboard, 1, 6, str.tostring(math.round(fvgScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 7, "OB Score", text_color=color.white)
+    table.cell(dashboard, 1, 7, str.tostring(math.round(orderBlockScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 8, "PD Score", text_color=color.white)
+    table.cell(dashboard, 1, 8, str.tostring(math.round(pdScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 9, "Session Score", text_color=color.white)
+    table.cell(dashboard, 1, 9, str.tostring(math.round(sessionScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 10, "Final Score", text_color=color.white)
+    table.cell(dashboard, 1, 10, str.tostring(math.round(finalScore)), text_color=color.white)
+
+    table.cell(dashboard, 0, 11, "Confidence", text_color=color.white)
+    table.cell(dashboard, 1, 11, str.tostring(math.round(confidenceScore)) + "%", text_color=color.white)
+
+//---------------------------------------------------------
+// PAGE 6: DEBUG -- raw internal values for troubleshooting
+//---------------------------------------------------------
 
 drawDebug() =>
-    table.clear(dashboard, 0, 0, 1, 31)
-    table.cell(dashboard,0,0,"DEBUG")
+    clearDashboard()
+
+    table.cell(dashboard, 0, 0, "TITAN X — DEBUG", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+    table.cell(dashboard, 0, 1, "Bar Index", text_color=color.white)
+    table.cell(dashboard, 1, 1, str.tostring(bar_index), text_color=color.white)
+
+    table.cell(dashboard, 0, 2, "Session High", text_color=color.white)
+    table.cell(dashboard, 1, 2, str.tostring(sessionHigh), text_color=color.white)
+
+    table.cell(dashboard, 0, 3, "Session Low", text_color=color.white)
+    table.cell(dashboard, 1, 3, str.tostring(sessionLow), text_color=color.white)
+
+    table.cell(dashboard, 0, 4, "Last Swing High", text_color=color.white)
+    table.cell(dashboard, 1, 4, str.tostring(lastSwingHigh), text_color=color.white)
+
+    table.cell(dashboard, 0, 5, "Last Swing Low", text_color=color.white)
+    table.cell(dashboard, 1, 5, str.tostring(lastSwingLow), text_color=color.white)
+
+    table.cell(dashboard, 0, 6, "Prev Swing High", text_color=color.white)
+    table.cell(dashboard, 1, 6, str.tostring(previousSwingHigh), text_color=color.white)
+
+    table.cell(dashboard, 0, 7, "Prev Swing Low", text_color=color.white)
+    table.cell(dashboard, 1, 7, str.tostring(previousSwingLow), text_color=color.white)
+
+    table.cell(dashboard, 0, 8, "Equal High", text_color=color.white)
+    table.cell(dashboard, 1, 8, str.tostring(equalHighPrice), text_color=color.white)
+
+    table.cell(dashboard, 0, 9, "Equal Low", text_color=color.white)
+    table.cell(dashboard, 1, 9, str.tostring(equalLowPrice), text_color=color.white)
+
+    table.cell(dashboard, 0, 10, "Last Sweep", text_color=color.white)
+    table.cell(dashboard, 1, 10, str.tostring(lastSweepPrice), text_color=color.white)
+
+//---------------------------------------------------------
 
 updateDashboard() =>
 
@@ -564,6 +653,7 @@ updateDashboard() =>
 
     else
         drawDebug()
+
    
 //=============================================================================
 // LOGGER
@@ -788,7 +878,7 @@ if not na(pivotHigh)
                     textcolor=color.white)
 
     previousSwingHigh := lastSwingHigh
-lastSwingHigh := pivotHigh
+    lastSwingHigh := pivotHigh
 
 //------------------------------------------------------
 
