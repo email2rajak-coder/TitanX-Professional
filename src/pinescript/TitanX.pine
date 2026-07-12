@@ -1,1882 +1,1926 @@
-//@version=6
-//=============================================================================
-// TITAN X PROFESSIONAL
-// Core Framework
-//-----------------------------------------------------------------------------
-// Version : 0.6.0
-// Build   : 0005
-// Module  : Core Engine
-// Status  : Stable
-//=============================================================================
-
-indicator(
-     title = "TITAN X Professional",
-     shorttitle = "TITAN X",
-     overlay = true,
-     max_labels_count = 500,
-     max_lines_count = 500,
-     max_boxes_count = 500)
-
-//=============================================================================
-// VERSION
-//=============================================================================
-
-const string TITAN_VERSION = "0.5.3-dev"
-const string TITAN_BUILD   = "0004"
-
-//=============================================================================
-// INPUTS
-//=============================================================================
-
-groupGeneral = "General"
-
-showDashboard = input.bool(true, "Show Dashboard", group = groupGeneral)
-debugMode     = input.bool(false, "Debug Mode", group = groupGeneral)
-//==================================================
-// DASHBOARD
-//==================================================
-
-groupDashboard = "Dashboard"
-
-dashboardPage = input.string(
-    "SUMMARY",
-    "Dashboard Page",
-    options = [
-        "SUMMARY",
-        "STRUCTURE",
-        "SMART MONEY",
-        "EXECUTION",
-        "STATISTICS",
-        "DEBUG"
-    ],
-    group = groupDashboard)
-//=====================================================
-// TRADE SETUP PANEL
-//=====================================================
-
-groupTradeBox = "Trade Setup"
-
-showTradeBox = input.bool(
-     true,
-     "Show Trade Setup",
-     group = groupTradeBox)
-
-tradeBoxPosition = input.string(
-     "Bottom Right",
-     "Position",
-     options=[
-     "Top Left",
-     "Top Right",
-     "Bottom Left",
-     "Bottom Right"],
-     group=groupTradeBox)    
-//=============================================================================
-// STRUCTURE INPUTS
-//=============================================================================
-
-groupStructure = "Structure"
-
-pivotLeft  = input.int(5, "Pivot Left", minval = 1, group = groupStructure)
-pivotRight = input.int(5, "Pivot Right", minval = 1, group = groupStructure)
-
-showStructureLabels = input.bool(true, "Show Structure Labels", group = groupStructure)
-//=============================================================================
-// LIQUIDITY INPUTS
-//=============================================================================
-
-groupLiquidity = "Liquidity"
-
-eqTolerance = input.float(
-     0.10,
-     "Equal High/Low Tolerance (%)",
-     minval = 0.01,
-     step = 0.01,
-     group = groupLiquidity)
-
-showLiquidityLabels = input.bool(
-     true,
-     "Show Liquidity Labels",
-     group = groupLiquidity)
-
-//=============================================================================
-// MULTI TIMEFRAME
-//=============================================================================
-
-groupMTF = "Multi Timeframe"
-
-enableMTF = input.bool(true, "Enable MTF", group = groupMTF)
-
-higherTF = input.timeframe("60", "Higher Timeframe", group = groupMTF)
-
-showMTFDashboard = input.bool(true, "Show MTF Info", group = groupMTF)
-//=============================================================================
-// FAIR VALUE GAP
-//=============================================================================
-
-groupFVG = "Fair Value Gap"
-
-showFVG = input.bool(true, "Show Fair Value Gaps", group = groupFVG)
-
-minFVGTicks = input.int(5, "Minimum Gap (Ticks)", minval = 1, group = groupFVG)
-//=============================================================================
-// ORDER BLOCK
-//=============================================================================
-
-groupOB = "Order Blocks"
-
-showOrderBlocks = input.bool(true, "Show Order Blocks", group = groupOB)
-
-obLookback = input.int(20, "Lookback", minval = 5, group = groupOB)
-//=============================================================================
-// PREMIUM / DISCOUNT
-//=============================================================================
-
-groupPD = "Premium / Discount"
-
-showPDZones = input.bool(true, "Show Premium/Discount", group = groupPD)
-
-pdLookback = input.int(100, "Swing Lookback", minval = 20, group = groupPD)
-//=============================================================================
-// SESSION ENGINE
-//=============================================================================
-
-groupSession = "Session"
-
-showSessions = input.bool(true, "Show Sessions", group = groupSession)
-
-showKillZones = input.bool(true, "Show Kill Zones", group = groupSession)
-
-sessionTimezone = input.string(
-     "Etc/UTC",
-     "Timezone",
-     options = ["Etc/UTC","Europe/London","America/New_York"],
-     group = groupSession)
-
-
-//=============================================================================
-// ASSET DETECTION
-//=============================================================================
-
-string symbolName = syminfo.ticker
-string timeframeName = timeframe.period
-
-string assetType = "UNKNOWN"
-
-if str.contains(symbolName, "BTC")
-    assetType := "CRYPTO"
-
-else if str.contains(symbolName, "ETH")
-    assetType := "CRYPTO"
-
-else if str.contains(symbolName, "XAU")
-    assetType := "METAL"
-
-else if str.contains(symbolName, "XAG")
-    assetType := "METAL"
-
-else if str.contains(symbolName, "EUR")
-    assetType := "FOREX"
-
-else if str.contains(symbolName, "GBP")
-    assetType := "FOREX"
-
-//=============================================================================
-// CORE VARIABLES
-//=============================================================================
-
-var string marketState = "UNKNOWN"
-var float trendScore = 0.0
-var float confidenceScore = 0.0
-//=============================================================================
-// STRUCTURE VARIABLES
-//=============================================================================
-
-var float lastSwingHigh = na
-var float lastSwingLow  = na
-
-var string structureDirection = "NEUTRAL"
-
-var float structureScore = 0
-
-var bool bullBOS = false
-var bool bearBOS = false
-
-var bool bullCHOCH = false
-var bool bearCHOCH = false
-//=============================================================================
-// LIQUIDITY VARIABLES
-//=============================================================================
-
-var bool eqHighDetected = false
-var bool eqLowDetected = false
-
-var float equalHighPrice = na
-var float equalLowPrice = na
-
-var float liquidityScore = 0.0
-//=============================================================================
-// LIQUIDITY SWEEP VARIABLES
-//=============================================================================
-
-var bool bullSweep = false
-var bool bearSweep = false
-
-var float lastSweepPrice = na
-
-var float sweepScore = 0.0
-//=============================================================================
-// CONFLUENCE VARIABLES
-//=============================================================================
-
-var float confluenceScore = 0.0
-var string marketBias = "NEUTRAL"
-
-var bool trendAligned = false
-var bool structureAligned = false
-var bool liquidityAligned = false
-//=============================================================================
-// MTF VARIABLES
-//=============================================================================
-
-var string htfTrend = "UNKNOWN"
-var float htfEMA20 = na
-var float htfEMA50 = na
-
-var bool htfBullish = false
-var bool htfBearish = false
-
-var float mtfScore = 0.0
-//=============================================================================
-// FVG VARIABLES
-//=============================================================================
-
-var bool bullFVG = false
-var bool bearFVG = false
-
-var float bullFVGHigh = na
-var float bullFVGLow = na
-
-var float bearFVGHigh = na
-var float bearFVGLow = na
-
-var float fvgScore = 0.0
-//=============================================================================
-// ORDER BLOCK VARIABLES
-//=============================================================================
-
-var bool bullOB = false
-var bool bearOB = false
-
-var float bullOBHigh = na
-var float bullOBLow = na
-
-var float bearOBHigh = na
-var float bearOBLow = na
-
-var float orderBlockScore = 0.0
-//=============================================================================
-// PREMIUM / DISCOUNT VARIABLES
-//=============================================================================
-
-var float premiumLevel = na
-var float equilibriumLevel = na
-var float discountLevel = na
-
-var string pdState = "UNKNOWN"
-
-var float pdScore = 0.0
-//=============================================================================
-// SESSION VARIABLES
-//=============================================================================
-
-var bool asianSession = false
-var bool londonSession = false
-var bool newYorkSession = false
-
-var bool londonKillZone = false
-var bool newYorkKillZone = false
-
-var float sessionHigh = na
-var float sessionLow = na
-
-var string activeSession = "NONE"
-
-var float sessionScore = 0.0
-//==============================================================
-// SMART DECISION VARIABLES
-//==============================================================
-
-var float finalScore = 0.0
-
-var string tradeGrade = "N/A"
-
-var string entryQuality = "UNKNOWN"
-
-var string riskRating = "UNKNOWN"
-//=====================================================
-// AI FILTER
-//=====================================================
-
-var bool allowLong = false
-var bool allowShort = false
-//=====================================================
-// TRADE QUALITY ENGINE
-//=====================================================
-
-var string tradeQuality = "UNKNOWN"
-//=====================================================
-// RISK MANAGEMENT
-//=====================================================
-
-var float stopLoss = na
-var float takeProfit1 = na
-var float takeProfit2 = na
-var float takeProfit3 = na
-
-var float riskReward = na
-//=====================================================
-// ENTRY EXECUTION ENGINE
-//=====================================================
-
-var bool tradeReady = false
-
-var float entryPrice = na
-
-var string executionStatus = "WAIT"
-//=====================================================
-// INSTITUTIONAL CANDLE RATING ENGINE
-//=====================================================
-
-//=============================================================================
-// BOS / CHOCH
-//=============================================================================
-
-var float previousSwingHigh = na
-var float previousSwingLow  = na
-
-//=====================================================
-// AI SIGNAL PANEL
-//=====================================================
-
-var string aiSignal = "WAIT"
-
-var float aiConfidence = 0.0
-
-var int trendStars = 0
-var int structureStars = 0
-var int liquidityStars = 0
-var int mtfStars = 0
-
-var string riskLevel = "UNKNOWN"
-//=============================================================================
-// UTILITY FUNCTIONS
-//=============================================================================
-
-roundPrice(price) =>
-    float result = math.round(price / syminfo.mintick) * syminfo.mintick
-    result
-
-percent(a, b) =>
-    float result = b == 0 ? 0.0 : (a / b) * 100.0
-    result
-
-    //====================================================
-// PROFESSIONAL DASHBOARD COLORS
-//====================================================
-
-color HEADER_BG     = color.rgb(41,47,63)
-color PANEL_BG      = color.rgb(30,34,45)
-
-color BUY_BG        = color.rgb(0,120,0)
-color SELL_BG       = color.rgb(150,0,0)
-color WAIT_BG       = color.rgb(120,120,0)
-
-color TITLE_COLOR   = color.white
-color VALUE_COLOR   = color.white
-color LABEL_COLOR   = color.silver
-
-color GOOD_COLOR    = color.lime
-color WARNING_COLOR = color.orange
-color BAD_COLOR     = color.red
-//=============================================================================
-// DASHBOARD
-//=============================================================================
-
-var table dashboard = table.new(
-     position.top_right,
-     2,
-     32,
-     bgcolor=color.new(#1a1c2c, 0),
-     frame_color=color.gray,
-     frame_width=1)
-
-//=====================================================
-// TRADE SETUP TABLE
-//=====================================================
-
-var table tradeBox =
-     table.new(
-          position.bottom_right,
-          2,
-          10,
-          bgcolor = color.new(color.white, 0),
-          frame_color=color.gray,
-          frame_width=1)
-getTrendDirection() =>
-
-    string dir = ""
-
-    if trendScore >= 90
-        dir := "ULTRA BULL"
-
-    else if trendScore >= 75
-        dir := "STRONG BULL"
-
-    else if trendScore >= 60
-        dir := "BULL"
-
-    else if trendScore >= 40
-        dir := "NEUTRAL"
-
-    else if trendScore >= 25
-        dir := "BEAR"
-
-    else if trendScore >= 10
-        dir := "STRONG BEAR"
-
-    else
-        dir := "ULTRA BEAR"
-
-    dir
-getTradeBoxPosition() =>
-
-    switch tradeBoxPosition
-
-        "Top Left" => position.top_left
-
-        "Top Right" => position.top_right
-
-        "Bottom Left" => position.bottom_left
-
-        => position.bottom_right
-
-//====================================================
-// AI HELPERS
-//====================================================
-
-getAISignal() =>
-
-    string signal = ""
-
-    if finalScore >= 90
-        signal := "STRONG BUY"
-    else if finalScore >= 75
-        signal := "BUY"
-    else if finalScore >= 55
-        signal := "WAIT"
-    else if finalScore >= 35
-        signal := "SELL"
-    else
-        signal := "STRONG SELL"
-
-    signal
-
-
-getRiskLevel() =>
-
-    string risk = ""
-
-    if riskReward >= 3
-        risk := "LOW"
-    else if riskReward >= 2
-        risk := "MEDIUM"
-    else
-        risk := "HIGH"
-
-    risk
-    //====================================================
-// INSTITUTIONAL VALIDATION HELPERS
-//====================================================
-
-getTrendCheck() =>
-    trendScore >= 70 ? "✓ PASS" : "✗ FAIL"
-
-getStructureCheck() =>
-    structureScore >= 60 ? "✓ PASS" : "✗ FAIL"
-
-getLiquidityCheck() =>
-    (bullSweep or bearSweep or eqHighDetected or eqLowDetected) ? "✓ PASS" : "✗ FAIL"
-
-getHTFCheck() =>
-    (htfBullish or htfBearish) ? "✓ PASS" : "✗ FAIL"
-
-getFVGCheck() =>
-    (bullFVG or bearFVG) ? "✓ PASS" : "✗ FAIL"
-
-getOBCheck() =>
-    (bullOB or bearOB) ? "✓ PASS" : "✗ FAIL"
-
-getSessionCheck() =>
-    (londonKillZone or newYorkKillZone) ? "✓ PASS" : "✗ FAIL"
-
-getBOSCheck() =>
-    (bullBOS or bearBOS or bullCHOCH or bearCHOCH) ? "✓ PASS" : "✗ FAIL"
-
-getInstitutionalScore() =>
-
-    int score = 0
-
-    if trendScore >= 70
-        score += 1
-
-    if structureScore >= 60
-        score += 1
-
-    if bullBOS or bearBOS or bullCHOCH or bearCHOCH
-        score += 1
-
-    if bullSweep or bearSweep or eqHighDetected or eqLowDetected
-        score += 1
-
-    if htfBullish or htfBearish
-        score += 1
-
-    if bullFVG or bearFVG
-        score += 1
-
-    if bullOB or bearOB
-        score += 1
-
-    if londonKillZone or newYorkKillZone
-        score += 1
-
-    score
-
-//==================================================
-// STAR RATING
-//==================================================
-
-getStars(score)=>
-
-    string stars = ""
-
-    if score >= 90
-        stars := "★★★★★"
-    else if score >= 75
-        stars := "★★★★☆"
-    else if score >= 60
-        stars := "★★★☆☆"
-    else if score >= 40
-        stars := "★★☆☆☆"
-    else
-        stars := "★☆☆☆☆"
-
-    stars 
-
-//---------------------------------------------------------
-
-clearDashboard() =>
-    table.clear(dashboard,0,0,1,31)
-
-//---------------------------------------------------------
-// PAGE 1: SUMMARY -- quick top-level read
-//---------------------------------------------------------
-
-drawSummary() =>
-    clearDashboard()
-
-    table.cell(
-    dashboard,
-    0,
-    0,
-    " TITAN X PROFESSIONAL ",
-    bgcolor=HEADER_BG,
-    text_color=TITLE_COLOR)
-
-    table.cell(
-    dashboard,
-    1,
-    0,
-    TITAN_BUILD,
-    bgcolor=HEADER_BG,
-    text_color=TITLE_COLOR)
-
-    table.cell(dashboard, 0, 1, "Symbol", text_color=color.white)
-    table.cell(dashboard, 1, 1, symbolName, text_color=color.white)
-
-    table.cell(dashboard, 0, 2, "TF / Asset", text_color=color.white)
-    table.cell(dashboard, 1, 2, timeframeName + " / " + assetType, text_color=color.white)
-
-    table.cell(dashboard, 0, 3, "Trend", text_color=color.white)
-    table.cell(dashboard, 1, 3, getTrendDirection(), text_color=color.white)
-
-    table.cell(dashboard, 0, 4, "Decision", text_color=color.white)
-    table.cell(dashboard, 1, 4, marketState, text_color=color.white)
-
-    table.cell(dashboard, 0, 5, "Bias", text_color=color.white)
-    table.cell(dashboard, 1, 5, marketBias, text_color=color.white)
-
-    table.cell(dashboard, 0, 6, "Trade Quality", text_color=color.white)
-    table.cell(dashboard, 1, 6, tradeQuality, text_color=color.white)
-
-    table.cell(dashboard, 0, 7, "Confidence", text_color=color.white)
-    table.cell(dashboard, 1, 7, str.tostring(math.round(confidenceScore)) + "%", text_color=color.white)
-
-    table.cell(dashboard, 0, 8, "Grade", text_color=color.white)
-    table.cell(dashboard, 1, 8, tradeGrade, text_color=color.white)
-
-    table.cell(dashboard, 0, 9, "Session", text_color=color.white)
-    table.cell(dashboard, 1, 9, activeSession, text_color=color.white)
-
-    table.cell(dashboard, 0, 10, "Kill Zone", text_color=color.white)
-    table.cell(dashboard, 1, 10,
-         londonKillZone ? "LONDON" :
-         newYorkKillZone ? "NEW YORK" : "-", text_color=color.white)
-
-    table.cell(dashboard, 0, 11, "Ready", text_color=color.white)
-    table.cell(dashboard, 1, 11, confluenceScore >= 80 ? "YES" : "WAIT", text_color=color.white)
-        //====================================================
-    // AI DECISION
-    //====================================================
-
-    table.cell(dashboard,0,20,"AI Signal")
-    table.cell(dashboard,1,20,getAISignal())
-
-    table.cell(dashboard,0,21,"Confidence")
-    table.cell(dashboard,1,21,str.tostring(math.round(confidenceScore))+"%")
-
-    table.cell(dashboard,0,22,"Trend")
-    table.cell(dashboard,1,22,getStars(trendScore))
-
-    table.cell(dashboard,0,23,"Structure")
-    table.cell(dashboard,1,23,getStars(structureScore))
-
-    table.cell(dashboard,0,24,"Liquidity")
-    table.cell(dashboard,1,24,getStars(liquidityScore))
-
-    table.cell(dashboard,0,25,"HTF")
-    table.cell(dashboard,1,25,getStars(mtfScore))
-
-    table.cell(dashboard,0,26,"Risk")
-    table.cell(dashboard,1,26,getRiskLevel())
-    //====================================================
-// PROFESSIONAL AI PANEL
-//====================================================
-
-table.cell(dashboard,0,27,"Trend ★")
-table.cell(dashboard,1,27,getStars(trendScore))
-
-table.cell(dashboard,0,28,"Structure ★")
-table.cell(dashboard,1,28,getStars(structureScore))
-
-table.cell(dashboard,0,29,"Liquidity ★")
-table.cell(dashboard,1,29,getStars(liquidityScore))
-
-table.cell(dashboard,0,30,"HTF ★")
-table.cell(dashboard,1,30,getStars(mtfScore))
-
-table.cell(dashboard,0,31,"Signal")
-color signalColor =
-     getAISignal()=="STRONG BUY" ? BUY_BG :
-     getAISignal()=="BUY" ? color.green :
-     getAISignal()=="WAIT" ? WAIT_BG :
-     getAISignal()=="SELL" ? color.orange :
-     SELL_BG
-
-table.cell(
-    dashboard,
-    1,
-    31,
-    getAISignal(),
-    bgcolor=signalColor,
-    text_color=color.white)
-
-//---------------------------------------------------------
-// PAGE 2: STRUCTURE -- market structure / liquidity
-//---------------------------------------------------------
-
-drawStructure() =>
-    clearDashboard()
-
-    table.cell(dashboard, 0, 0, "TITAN X — STRUCTURE", text_color=color.white, bgcolor=color.new(#2962ff, 0))
-    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
-
-    table.cell(dashboard, 0, 1, "Structure", text_color=color.white)
-    table.cell(dashboard, 1, 1, structureDirection, text_color=color.white)
-
-    table.cell(dashboard, 0, 2, "Struct Score", text_color=color.white)
-    table.cell(dashboard, 1, 2, str.tostring(math.round(structureScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 3, "BOS", text_color=color.white)
-    table.cell(dashboard, 1, 3, bullBOS ? "BULL" : bearBOS ? "BEAR" : "-", text_color=color.white)
-
-    table.cell(dashboard, 0, 4, "CHOCH", text_color=color.white)
-    table.cell(dashboard, 1, 4, bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-", text_color=color.white)
-
-    table.cell(dashboard, 0, 5, "EQH / EQL", text_color=color.white)
-    table.cell(dashboard, 1, 5, (eqHighDetected ? "EQH " : "") + (eqLowDetected ? "EQL" : (eqHighDetected ? "" : "-")), text_color=color.white)
-
-    table.cell(dashboard, 0, 6, "Liquidity Score", text_color=color.white)
-    table.cell(dashboard, 1, 6, str.tostring(math.round(liquidityScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 7, "Sweep", text_color=color.white)
-    table.cell(dashboard, 1, 7, bullSweep ? "BULL" : bearSweep ? "BEAR" : "-", text_color=color.white)
-
-    table.cell(dashboard, 0, 8, "Sweep Score", text_color=color.white)
-    table.cell(dashboard, 1, 8, str.tostring(math.round(sweepScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 9, "Confluence", text_color=color.white)
-    table.cell(dashboard, 1, 9, str.tostring(math.round(confluenceScore)), text_color=color.white)
-
-//---------------------------------------------------------
-// PAGE 3: SMART MONEY -- FVG / OB / PD / HTF
-//---------------------------------------------------------
-
-drawSmartMoney() =>
-    clearDashboard()
-
-    table.cell(dashboard, 0, 0, "TITAN X — SMART MONEY", text_color=color.white, bgcolor=color.new(#2962ff, 0))
-    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
-
-    table.cell(dashboard, 0, 1, "Bull / Bear FVG", text_color=color.white)
-    table.cell(dashboard, 1, 1, (bullFVG ? "BULL " : "") + (bearFVG ? "BEAR" : (bullFVG ? "" : "-")), text_color=color.white)
-
-    table.cell(dashboard, 0, 2, "FVG Score", text_color=color.white)
-    table.cell(dashboard, 1, 2, str.tostring(math.round(fvgScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 3, "Bull / Bear OB", text_color=color.white)
-    table.cell(dashboard, 1, 3, (bullOB ? "BULL " : "") + (bearOB ? "BEAR" : (bullOB ? "" : "-")), text_color=color.white)
-
-    table.cell(dashboard, 0, 4, "OB Score", text_color=color.white)
-    table.cell(dashboard, 1, 4, str.tostring(math.round(orderBlockScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 5, "PD Zone", text_color=color.white)
-    table.cell(dashboard, 1, 5, pdState, text_color=color.white)
-
-    table.cell(dashboard, 0, 6, "PD Score", text_color=color.white)
-    table.cell(dashboard, 1, 6, str.tostring(math.round(pdScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 7, "Equilibrium", text_color=color.white)
-    table.cell(dashboard, 1, 7, str.tostring(math.round(equilibriumLevel)), text_color=color.white)
-
-    table.cell(dashboard, 0, 8, "HTF Trend", text_color=color.white)
-    table.cell(dashboard, 1, 8, htfTrend, text_color=color.white)
-
-    table.cell(dashboard, 0, 9, "MTF Score", text_color=color.white)
-    table.cell(dashboard, 1, 9, str.tostring(math.round(mtfScore)), text_color=color.white)
-
-    table.cell(dashboard, 0, 10, "MTF Align", text_color=color.white)
-    table.cell(dashboard, 1, 10, mtfScore >= 50 ? "YES" : "NO", text_color=color.white)
-
-//---------------------------------------------------------
-// PAGE 4: EXECUTION -- entries, SL/TP, allow flags
-//---------------------------------------------------------
-
-drawExecution() =>
-
-    clearDashboard()
-
-    //====================================================
-    // HEADER
-    //====================================================
-
-    table.cell(dashboard,0,0," TITAN X — EXECUTION ",bgcolor=HEADER_BG,text_color=TITLE_COLOR)
-    table.cell(dashboard,1,0,TITAN_BUILD,bgcolor=HEADER_BG,text_color=TITLE_COLOR)
-
-    //====================================================
-    // SIGNAL
-    //====================================================
-
-    table.cell(dashboard,0,1,"Signal",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,1,getAISignal(),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,2,"Entry",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,2,str.tostring(entryPrice),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,3,"Stop Loss",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,3,str.tostring(stopLoss),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,4,"TP1",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,4,str.tostring(takeProfit1),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,5,"TP2",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,5,str.tostring(takeProfit2),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,6,"TP3",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,6,str.tostring(takeProfit3),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,7,"Risk : Reward",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,7,"1 : "+str.tostring(riskReward),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,8,"Status",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,8,executionStatus,text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,9,"Execution",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,9,"MANUAL",text_color=VALUE_COLOR)
-//---------------------------------------------------------
-// PAGE 5: STATISTICS -- all scoring components + final score
-//---------------------------------------------------------
-
-drawStatistics() =>
-
-    clearDashboard()
-
-    //====================================================
-    // HEADER
-    //====================================================
-
-    table.cell(dashboard,0,0," TITAN X — STATISTICS ",
-        bgcolor=HEADER_BG,
-        text_color=TITLE_COLOR)
-
-    table.cell(dashboard,1,0,TITAN_BUILD,
-        bgcolor=HEADER_BG,
-        text_color=TITLE_COLOR)
-
-    //----------------------------------------------------
-    // ENGINE SCORES
-    //----------------------------------------------------
-
-    table.cell(dashboard,0,1,"Trend Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,1,str.tostring(math.round(trendScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,2,"Structure Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,2,str.tostring(math.round(structureScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,3,"Liquidity Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,3,str.tostring(math.round(liquidityScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,4,"Sweep Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,4,str.tostring(math.round(sweepScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,5,"HTF Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,5,str.tostring(math.round(mtfScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,6,"FVG Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,6,str.tostring(math.round(fvgScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,7,"Order Block",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,7,str.tostring(math.round(orderBlockScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,8,"PD Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,8,str.tostring(math.round(pdScore)),text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,9,"Session",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,9,activeSession,text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,10,"Confidence",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,10,str.tostring(math.round(confidenceScore))+"%",text_color=VALUE_COLOR)
-
-    table.cell(dashboard,0,11,"Final Score",text_color=LABEL_COLOR)
-    table.cell(dashboard,1,11,str.tostring(math.round(finalScore)),text_color=VALUE_COLOR)
-
-//---------------------------------------------------------
-// PAGE 6: DEBUG -- raw internal values for troubleshooting
-//---------------------------------------------------------
-
-drawDebug() =>
-
-    clearDashboard()
-
-    //====================================================
-    // HEADER
-    //====================================================
-
-    table.cell(dashboard,0,0," TITAN X — DEBUG ",
-        bgcolor=HEADER_BG,
-        text_color=TITLE_COLOR)
-
-    table.cell(dashboard,1,0,TITAN_BUILD,
-        bgcolor=HEADER_BG,
-        text_color=TITLE_COLOR)
-
-        //====================================================
-    // ENGINE STATUS
-    //====================================================
-
-    table.cell(dashboard,0,1,"Trend")
-    table.cell(dashboard,1,1,str.tostring(math.round(trendScore)))
-
-    table.cell(dashboard,0,2,"Structure")
-    table.cell(dashboard,1,2,str.tostring(math.round(structureScore)))
-
-    table.cell(dashboard,0,3,"Liquidity")
-    table.cell(dashboard,1,3,str.tostring(math.round(liquidityScore)))
-
-    table.cell(dashboard,0,4,"Sweep")
-    table.cell(dashboard,1,4,str.tostring(math.round(sweepScore)))
-
-    table.cell(dashboard,0,5,"MTF")
-    table.cell(dashboard,1,5,str.tostring(math.round(mtfScore)))
-
-    table.cell(dashboard,0,6,"FVG")
-    table.cell(dashboard,1,6,str.tostring(math.round(fvgScore)))
-
-    table.cell(dashboard,0,7,"Order Block")
-    table.cell(dashboard,1,7,str.tostring(math.round(orderBlockScore)))
-
-    table.cell(dashboard,0,8,"PD")
-    table.cell(dashboard,1,8,str.tostring(math.round(pdScore)))
-
-    table.cell(dashboard,0,9,"Session")
-    table.cell(dashboard,1,9,activeSession)
-
-    table.cell(dashboard,0,10,"Confidence")
-    table.cell(dashboard,1,10,str.tostring(math.round(confidenceScore))+"%")
-
-    table.cell(dashboard,0,11,"Final Score")
-    table.cell(dashboard,1,11,str.tostring(math.round(finalScore)))
-
-    table.cell(dashboard,0,12,"Market State")
-    table.cell(dashboard,1,12,marketState)
-
-    table.cell(dashboard,0,13,"Trade Ready")
-    table.cell(dashboard,1,13,tradeReady ? "YES" : "NO")
-
-    table.cell(dashboard,0,14,"Execution")
-    table.cell(dashboard,1,14,executionStatus)
-
-    table.cell(dashboard,0,15,"Risk")
-    table.cell(dashboard,1,15,riskRating)
-    //====================================================
-// INSTITUTIONAL VALIDATION
-//====================================================
-
-    table.cell(dashboard,0,16,"Institutional")
-    table.cell(dashboard,1,16,str.tostring(getInstitutionalScore()) + " / 8")
-
-    table.cell(dashboard,0,17,"Trend")
-    table.cell(dashboard,1,17,getTrendCheck())
-
-    table.cell(dashboard,0,18,"Structure")
-    table.cell(dashboard,1,18,getStructureCheck())
-
-    table.cell(dashboard,0,19,"BOS / CHOCH")
-    table.cell(dashboard,1,19,getBOSCheck())
-
-    table.cell(dashboard,0,20,"Liquidity")
-    table.cell(dashboard,1,20,getLiquidityCheck())
-
-    table.cell(dashboard,0,21,"HTF")
-    table.cell(dashboard,1,21,getHTFCheck())
-
-    table.cell(dashboard,0,22,"FVG")
-    table.cell(dashboard,1,22,getFVGCheck())
-
-    table.cell(dashboard,0,23,"Order Block")
-    table.cell(dashboard,1,23,getOBCheck())
-
-    table.cell(dashboard,0,24,"Session")
-    table.cell(dashboard,1,24,getSessionCheck())
-
-clearTradeBox() =>
-    table.clear(tradeBox, 0, 0, 1, 9)
-    
-drawTradeBox() =>
-
-    clearTradeBox()
-
-    table.cell(tradeBox,0,0,"TITAN X SETUP")
-
-    table.cell(tradeBox,0,1,"Signal")
-    table.cell(tradeBox,1,1,marketState)
-
-    table.cell(tradeBox,0,2,"Entry")
-    table.cell(tradeBox,1,2,str.tostring(entryPrice))
-
-    table.cell(tradeBox,0,3,"SL")
-    table.cell(tradeBox,1,3,str.tostring(stopLoss))
-
-    table.cell(tradeBox,0,4,"TP1")
-    table.cell(tradeBox,1,4,str.tostring(takeProfit1))
-
-    table.cell(tradeBox,0,5,"TP2")
-    table.cell(tradeBox,1,5,str.tostring(takeProfit2))
-
-    table.cell(tradeBox,0,6,"TP3")
-    table.cell(tradeBox,1,6,str.tostring(takeProfit3))
-
-    table.cell(tradeBox,0,7,"R:R")
-    table.cell(tradeBox,1,7,"1 : "+str.tostring(riskReward))
-
-    table.cell(tradeBox,0,8,"Status")
-    table.cell(tradeBox,1,8,executionStatus)
-
-    table.cell(tradeBox,0,9,"Ready")
-    table.cell(tradeBox,1,9,tradeReady ? "YES" : "NO")
-//---------------------------------------------------------
-
-updateDashboard() =>
-
-    if dashboardPage == "SUMMARY"
-        drawSummary()
-
-    else if dashboardPage == "STRUCTURE"
-        drawStructure()
-
-    else if dashboardPage == "SMART MONEY"
-        drawSmartMoney()
-
-    else if dashboardPage == "EXECUTION"
-        drawExecution()
-
-    else if dashboardPage == "STATISTICS"
-        drawStatistics()
-
-    else
-        drawDebug()
-
-
-//=============================================================================
-// LOGGER
-//=============================================================================
-
-log(message)=>
-
-    if debugMode and barstate.islast
-        label.new(
-             bar_index,
-             high,
-             message,
-             style=label.style_label_down)
-
-//=============================================================================
-// ENGINE PLACEHOLDERS
-//=============================================================================
-
-//=============================================================================
-// TREND ENGINE
-//=============================================================================
-
-// EMAs
-ema20  = ta.ema(close,20)
-ema50  = ta.ema(close,50)
-ema100 = ta.ema(close,100)
-ema200 = ta.ema(close,200)
-
-//------------------------------------------------------------
-// Trend Score
-//------------------------------------------------------------
-calculateTrend()=>
-
-    float score = 0
-
-    // EMA Alignment
-    score += ema20 > ema50 ? 15 : 0
-    score += ema50 > ema100 ? 15 : 0
-    score += ema100 > ema200 ? 15 : 0
-
-    // Price Position
-    score += close > ema20 ? 10 : 0
-    score += close > ema50 ? 10 : 0
-    score += close > ema100 ? 10 : 0
-    score += close > ema200 ? 10 : 0
-
-    // EMA Slope
-    score += ema20 > ema20[1] ? 5 : 0
-    score += ema50 > ema50[1] ? 5 : 0
-    score += ema100 > ema100[1] ? 3 : 0
-    score += ema200 > ema200[1] ? 2 : 0
-
-    score
+    //@version=6
     //=============================================================================
-// HIGHER TIMEFRAME DATA
-//=============================================================================
+    // TITAN X PROFESSIONAL
+    // Core Framework
+    //-----------------------------------------------------------------------------
+    // Version : 0.6.0
+    // Build   : 0005
+    // Module  : Core Engine
+    // Status  : Stable
+    //=============================================================================
 
-if enableMTF
+    indicator(
+        title = "TITAN X Professional",
+        shorttitle = "TITAN X",
+        overlay = true,
+        max_labels_count = 500,
+        max_lines_count = 500,
+        max_boxes_count = 500)
 
-    htfEMA20 := request.security(
-        syminfo.tickerid,
-        higherTF,
-        ta.ema(close,20))
+    //=============================================================================
+    // VERSION
+    //=============================================================================
 
-    htfEMA50 := request.security(
-        syminfo.tickerid,
-        higherTF,
-        ta.ema(close,50))
+    const string TITAN_VERSION = "0.5.3-dev"
+    const string TITAN_BUILD   = "0004"
 
-    htfBullish := htfEMA20 > htfEMA50
-    htfBearish := htfEMA20 < htfEMA50
+    //=============================================================================
+    // INPUTS
+    //=============================================================================
 
-//------------------------------------------------------------
-// Confidence
-//------------------------------------------------------------
-calculateConfidence()=>
+    groupGeneral = "General"
 
-    float confidence = 0
+    showDashboard = input.bool(true, "Show Dashboard", group = groupGeneral)
+    debugMode     = input.bool(false, "Debug Mode", group = groupGeneral)
+    //==================================================
+    // DASHBOARD
+    //==================================================
 
-    confidence += trendScore * 0.30
-    confidence += structureScore * 0.20
-    confidence += liquidityScore * 0.15
-    confidence += sweepScore * 0.10
-    confidence += mtfScore * 0.10
-    confidence += fvgScore * 0.05
-    confidence += pdScore * 0.05
-    confidence += sessionScore * 0.05
+    groupDashboard = "Dashboard"
 
-    math.min(confidence,100)
+    dashboardPage = input.string(
+        "SUMMARY",
+        "Dashboard Page",
+        options = [
+            "SUMMARY",
+            "STRUCTURE",
+            "SMART MONEY",
+            "EXECUTION",
+            "STATISTICS",
+            "DEBUG"
+        ],
+        group = groupDashboard)
+    //=====================================================
+    // TRADE SETUP PANEL
+    //=====================================================
+
+    groupTradeBox = "Trade Setup"
+
+    showTradeBox = input.bool(
+        true,
+        "Show Trade Setup",
+        group = groupTradeBox)
+
+    tradeBoxPosition = input.string(
+        "Bottom Right",
+        "Position",
+        options=[
+        "Top Left",
+        "Top Right",
+        "Bottom Left",
+        "Bottom Right"],
+        group=groupTradeBox)    
+    //=============================================================================
+    // STRUCTURE INPUTS
+    //=============================================================================
+
+    groupStructure = "Structure"
+
+    pivotLeft  = input.int(5, "Pivot Left", minval = 1, group = groupStructure)
+    pivotRight = input.int(5, "Pivot Right", minval = 1, group = groupStructure)
+
+    showStructureLabels = input.bool(true, "Show Structure Labels", group = groupStructure)
+    //=============================================================================
+    // LIQUIDITY INPUTS
+    //=============================================================================
+
+    groupLiquidity = "Liquidity"
+
+    eqTolerance = input.float(
+        0.10,
+        "Equal High/Low Tolerance (%)",
+        minval = 0.01,
+        step = 0.01,
+        group = groupLiquidity)
+
+    showLiquidityLabels = input.bool(
+        true,
+        "Show Liquidity Labels",
+        group = groupLiquidity)
+
+    //=============================================================================
+    // MULTI TIMEFRAME
+    //=============================================================================
+
+    groupMTF = "Multi Timeframe"
+
+    enableMTF = input.bool(true, "Enable MTF", group = groupMTF)
+
+    higherTF = input.timeframe("60", "Higher Timeframe", group = groupMTF)
+
+    showMTFDashboard = input.bool(true, "Show MTF Info", group = groupMTF)
+    //=============================================================================
+    // FAIR VALUE GAP
+    //=============================================================================
+
+    groupFVG = "Fair Value Gap"
+
+    showFVG = input.bool(true, "Show Fair Value Gaps", group = groupFVG)
+
+    minFVGTicks = input.int(5, "Minimum Gap (Ticks)", minval = 1, group = groupFVG)
+    //=============================================================================
+    // ORDER BLOCK
+    //=============================================================================
+
+    groupOB = "Order Blocks"
+
+    showOrderBlocks = input.bool(true, "Show Order Blocks", group = groupOB)
+
+    obLookback = input.int(20, "Lookback", minval = 5, group = groupOB)
+    //=============================================================================
+    // PREMIUM / DISCOUNT
+    //=============================================================================
+
+    groupPD = "Premium / Discount"
+
+    showPDZones = input.bool(true, "Show Premium/Discount", group = groupPD)
+
+    pdLookback = input.int(100, "Swing Lookback", minval = 20, group = groupPD)
+    //=============================================================================
+    // SESSION ENGINE
+    //=============================================================================
+
+    groupSession = "Session"
+
+    showSessions = input.bool(true, "Show Sessions", group = groupSession)
+
+    showKillZones = input.bool(true, "Show Kill Zones", group = groupSession)
+
+    sessionTimezone = input.string(
+        "Etc/UTC",
+        "Timezone",
+        options = ["Etc/UTC","Europe/London","America/New_York"],
+        group = groupSession)
 
 
-//==============================================================
-// FINAL SCORE ENGINE
-//==============================================================
+    //=============================================================================
+    // ASSET DETECTION
+    //=============================================================================
 
-calculateFinalScore()=>
+    string symbolName = syminfo.ticker
+    string timeframeName = timeframe.period
 
-    float finalScore = 0.0
+    string assetType = "UNKNOWN"
 
-    //----------------------------------------------------------
-    // Trend (25%)
-    //----------------------------------------------------------
-    finalScore += math.max(trendScore,0) * 0.25
+    if str.contains(symbolName, "BTC")
+        assetType := "CRYPTO"
 
-    //----------------------------------------------------------
-    // Structure (15%)
-    //----------------------------------------------------------
-    finalScore += math.max(structureScore,0) * 0.15
+    else if str.contains(symbolName, "ETH")
+        assetType := "CRYPTO"
 
-    //----------------------------------------------------------
-    // Liquidity (10%)
-    //----------------------------------------------------------
-    finalScore += math.max(liquidityScore,0) * 0.10
+    else if str.contains(symbolName, "XAU")
+        assetType := "METAL"
 
-    //----------------------------------------------------------
-    // Sweep (10%)
-    //----------------------------------------------------------
-    finalScore += math.max(sweepScore,0) * 0.10
+    else if str.contains(symbolName, "XAG")
+        assetType := "METAL"
 
-    //----------------------------------------------------------
-    // Higher Timeframe (10%)
-    //----------------------------------------------------------
-    finalScore += math.max(mtfScore,0) * 0.10
+    else if str.contains(symbolName, "EUR")
+        assetType := "FOREX"
 
-    //----------------------------------------------------------
-    // Fair Value Gap (8%)
-    //----------------------------------------------------------
-    finalScore += math.max(fvgScore,0) * 0.08
+    else if str.contains(symbolName, "GBP")
+        assetType := "FOREX"
 
-    //----------------------------------------------------------
-    // Order Block (7%)
-    //----------------------------------------------------------
-    finalScore += math.max(orderBlockScore,0) * 0.07
+    //=============================================================================
+    // CORE VARIABLES
+    //=============================================================================
 
-    //----------------------------------------------------------
-    // Premium / Discount (5%)
-    //----------------------------------------------------------
-    finalScore += math.max(pdScore,0) * 0.05
+    var string marketState = "UNKNOWN"
+    var float trendScore = 0.0
+    var float confidenceScore = 0.0
+    //=============================================================================
+    // STRUCTURE VARIABLES
+    //=============================================================================
 
-    //----------------------------------------------------------
-    // Session (5%)
-    //----------------------------------------------------------
-    finalScore += math.max(sessionScore,0) * 0.05
+    var float lastSwingHigh = na
+    var float lastSwingLow  = na
 
-    //----------------------------------------------------------
-    // Clamp
-    //----------------------------------------------------------
-    math.min(finalScore,100)
+    var string structureDirection = "NEUTRAL"
+
+    var float structureScore = 0
+
+    var bool bullBOS = false
+    var bool bearBOS = false
+
+    var bool bullCHOCH = false
+    var bool bearCHOCH = false
+    //=============================================================================
+    // LIQUIDITY VARIABLES
+    //=============================================================================
+
+    var bool eqHighDetected = false
+    var bool eqLowDetected = false
+
+    var float equalHighPrice = na
+    var float equalLowPrice = na
+
+    var float liquidityScore = 0.0
+    //=============================================================================
+    // LIQUIDITY SWEEP VARIABLES
+    //=============================================================================
+
+    var bool bullSweep = false
+    var bool bearSweep = false
+
+    var float lastSweepPrice = na
+
+    var float sweepScore = 0.0
+    //=============================================================================
+    // CONFLUENCE VARIABLES
+    //=============================================================================
+
+    var float confluenceScore = 0.0
+    var string marketBias = "NEUTRAL"
+
+    var bool trendAligned = false
+    var bool structureAligned = false
+    var bool liquidityAligned = false
+    //=============================================================================
+    // MTF VARIABLES
+    //=============================================================================
+
+    var string htfTrend = "UNKNOWN"
+    var float htfEMA20 = na
+    var float htfEMA50 = na
+
+    var bool htfBullish = false
+    var bool htfBearish = false
+
+    var float mtfScore = 0.0
+    //=============================================================================
+    // FVG VARIABLES
+    //=============================================================================
+
+    var bool bullFVG = false
+    var bool bearFVG = false
+
+    var float bullFVGHigh = na
+    var float bullFVGLow = na
+
+    var float bearFVGHigh = na
+    var float bearFVGLow = na
+
+    var float fvgScore = 0.0
+    //=============================================================================
+    // ORDER BLOCK VARIABLES
+    //=============================================================================
+
+    var bool bullOB = false
+    var bool bearOB = false
+
+    var float bullOBHigh = na
+    var float bullOBLow = na
+
+    var float bearOBHigh = na
+    var float bearOBLow = na
+
+    var float orderBlockScore = 0.0
+    //=============================================================================
+    // PREMIUM / DISCOUNT VARIABLES
+    //=============================================================================
+
+    var float premiumLevel = na
+    var float equilibriumLevel = na
+    var float discountLevel = na
+
+    var string pdState = "UNKNOWN"
+
+    var float pdScore = 0.0
+    //=============================================================================
+    // SESSION VARIABLES
+    //=============================================================================
+
+    var bool asianSession = false
+    var bool londonSession = false
+    var bool newYorkSession = false
+
+    var bool londonKillZone = false
+    var bool newYorkKillZone = false
+
+    var float sessionHigh = na
+    var float sessionLow = na
+
+    var string activeSession = "NONE"
+
+    var float sessionScore = 0.0
+    //==============================================================
+    // SMART DECISION VARIABLES
     //==============================================================
 
-//------------------------------------------------------------
-// Decision
-//------------------------------------------------------------
-//==============================================================
-// SMART DECISION ENGINE
-//==============================================================
+    var float finalScore = 0.0
 
-calculateSmartDecision()=>
+    var string tradeGrade = "N/A"
 
-    float score = calculateFinalScore()
+    var string entryQuality = "UNKNOWN"
 
-    string result = "WAIT"
+    var string riskRating = "UNKNOWN"
+    //=====================================================
+    // AI FILTER
+    //=====================================================
 
-    if allowLong and score >= 85
-        result := "STRONG BUY"
+    var bool allowLong = false
+    var bool allowShort = false
+    //=====================================================
+    // TRADE QUALITY ENGINE
+    //=====================================================
 
-    else if allowLong
-        result := "BUY"
+    var string tradeQuality = "UNKNOWN"
+    //=====================================================
+    // RISK MANAGEMENT
+    //=====================================================
 
-    else if allowShort and score <=15
-        result := "STRONG SELL"
+    var float stopLoss = na
+    var float takeProfit1 = na
+    var float takeProfit2 = na
+    var float takeProfit3 = na
 
-    else if allowShort
-        result := "SELL"
+    var float riskReward = na
+    //=====================================================
+    // ENTRY EXECUTION ENGINE
+    //=====================================================
 
-    else
-        result := "WAIT"
+    var bool tradeReady = false
 
-    result
+    var float entryPrice = na
 
-//------------------------------------------------------------
-// Trend Direction
-//------------------------------------------------------------
+    var string executionStatus = "WAIT"
+    //=====================================================
+    // INSTITUTIONAL CANDLE RATING ENGINE
+    //=====================================================
 
     //=============================================================================
-// SMART MARKET STRUCTURE ENGINE
-//=============================================================================
+    // BOS / CHOCH
+    //=============================================================================
 
-pivotHigh = ta.pivothigh(high, pivotLeft, pivotRight)
-pivotLow  = ta.pivotlow(low, pivotLeft, pivotRight)
+    var float previousSwingHigh = na
+    var float previousSwingLow  = na
 
-if not na(pivotHigh)
+    //=====================================================
+    // AI SIGNAL PANEL
+    //=====================================================
 
-    if not na(lastSwingHigh)
+    var string aiSignal = "WAIT"
 
-        if pivotHigh > lastSwingHigh
+    var float aiConfidence = 0.0
 
-            structureDirection := "HH"
+    var int trendStars = 0
+    var int structureStars = 0
+    var int liquidityStars = 0
+    var int mtfStars = 0
 
-            structureScore := math.min(structureScore + 15, 100)
+    var string riskLevel = "UNKNOWN"
+    //=============================================================================
+    // UTILITY FUNCTIONS
+    //=============================================================================
 
-            if showStructureLabels
-                label.new(
-                    bar_index-pivotRight,
-                    pivotHigh,
-                    "HH",
-                    style=label.style_label_down,
-                    color=color.green,
-                    textcolor=color.white)
+    roundPrice(price) =>
+        float result = math.round(price / syminfo.mintick) * syminfo.mintick
+        result
+
+    percent(a, b) =>
+        float result = b == 0 ? 0.0 : (a / b) * 100.0
+        result
+
+        //====================================================
+    // PROFESSIONAL DASHBOARD COLORS
+    //====================================================
+
+    color HEADER_BG     = color.rgb(41,47,63)
+    color PANEL_BG      = color.rgb(30,34,45)
+
+    color BUY_BG        = color.rgb(0,120,0)
+    color SELL_BG       = color.rgb(150,0,0)
+    color WAIT_BG       = color.rgb(120,120,0)
+
+    color TITLE_COLOR   = color.white
+    color VALUE_COLOR   = color.white
+    color LABEL_COLOR   = color.silver
+
+    color GOOD_COLOR    = color.lime
+    color WARNING_COLOR = color.orange
+    color BAD_COLOR     = color.red
+    //=============================================================================
+    // DASHBOARD
+    //=============================================================================
+
+    var table dashboard = table.new(
+        position.top_right,
+        2,
+        32,
+        bgcolor=color.new(#1a1c2c, 0),
+        frame_color=color.gray,
+        frame_width=1)
+
+    //=====================================================
+    // TRADE SETUP TABLE
+    //=====================================================
+
+    var table tradeBox =
+        table.new(
+            position.bottom_right,
+            2,
+            10,
+            bgcolor = color.new(color.white, 0),
+            frame_color=color.gray,
+            frame_width=1)
+    getTrendDirection() =>
+
+        string dir = ""
+
+        if trendScore >= 90
+            dir := "ULTRA BULL"
+
+        else if trendScore >= 75
+            dir := "STRONG BULL"
+
+        else if trendScore >= 60
+            dir := "BULL"
+
+        else if trendScore >= 40
+            dir := "NEUTRAL"
+
+        else if trendScore >= 25
+            dir := "BEAR"
+
+        else if trendScore >= 10
+            dir := "STRONG BEAR"
 
         else
+            dir := "ULTRA BEAR"
 
-            structureDirection := "LH"
+        dir
+    getTradeBoxPosition() =>
 
-            structureScore := math.max(structureScore - 15, 0)
+        switch tradeBoxPosition
 
-            if showStructureLabels
-                label.new(
-                    bar_index-pivotRight,
-                    pivotHigh,
-                    "LH",
-                    style=label.style_label_down,
-                    color=color.red,
-                    textcolor=color.white)
+            "Top Left" => position.top_left
 
-    previousSwingHigh := lastSwingHigh
-    lastSwingHigh := pivotHigh
+            "Top Right" => position.top_right
 
-//------------------------------------------------------
+            "Bottom Left" => position.bottom_left
 
-//------------------------------------------------------
-// LOW STRUCTURE
-//------------------------------------------------------
+            => position.bottom_right
 
-if not na(pivotLow)
+    //====================================================
+    // AI HELPERS
+    //====================================================
 
-    if not na(lastSwingLow)
+    getAISignal() =>
 
-        if pivotLow > lastSwingLow
+        string signal = ""
 
-            structureDirection := "HL"
-            structureScore := math.min(structureScore + 15, 100)
+        if finalScore >= 90
+            signal := "STRONG BUY"
+        else if finalScore >= 75
+            signal := "BUY"
+        else if finalScore >= 55
+            signal := "WAIT"
+        else if finalScore >= 35
+            signal := "SELL"
+        else
+            signal := "STRONG SELL"
 
-            if showStructureLabels
-                label.new(
-                    bar_index - pivotRight,
-                    pivotLow,
-                    "HL",
-                    style = label.style_label_up,
-                    color = color.green,
-                    textcolor = color.white
-                )
+        signal
+
+
+    getRiskLevel() =>
+
+        string risk = ""
+
+        if riskReward >= 3
+            risk := "LOW"
+        else if riskReward >= 2
+            risk := "MEDIUM"
+        else
+            risk := "HIGH"
+
+        risk
+        //====================================================
+    // INSTITUTIONAL VALIDATION HELPERS
+    //====================================================
+
+    getTrendCheck() =>
+        trendScore >= 70 ? "✓ PASS" : "✗ FAIL"
+
+    getStructureCheck() =>
+        structureScore >= 60 ? "✓ PASS" : "✗ FAIL"
+
+    getLiquidityCheck() =>
+        (bullSweep or bearSweep or eqHighDetected or eqLowDetected) ? "✓ PASS" : "✗ FAIL"
+
+    getHTFCheck() =>
+        (htfBullish or htfBearish) ? "✓ PASS" : "✗ FAIL"
+
+    getFVGCheck() =>
+        (bullFVG or bearFVG) ? "✓ PASS" : "✗ FAIL"
+
+    getOBCheck() =>
+        (bullOB or bearOB) ? "✓ PASS" : "✗ FAIL"
+
+    getSessionCheck() =>
+        (londonKillZone or newYorkKillZone) ? "✓ PASS" : "✗ FAIL"
+
+    getBOSCheck() =>
+        (bullBOS or bearBOS or bullCHOCH or bearCHOCH) ? "✓ PASS" : "✗ FAIL"
+
+    getInstitutionalScore() =>
+
+        int score = 0
+
+        if trendScore >= 70
+            score += 1
+
+        if structureScore >= 60
+            score += 1
+
+        if bullBOS or bearBOS or bullCHOCH or bearCHOCH
+            score += 1
+
+        if bullSweep or bearSweep or eqHighDetected or eqLowDetected
+            score += 1
+
+        if htfBullish or htfBearish
+            score += 1
+
+        if bullFVG or bearFVG
+            score += 1
+
+        if bullOB or bearOB
+            score += 1
+
+        if londonKillZone or newYorkKillZone
+            score += 1
+
+        score
+
+    //==================================================
+    // STAR RATING
+    //==================================================
+
+    getStars(score)=>
+
+        string stars = ""
+
+        if score >= 90
+            stars := "★★★★★"
+        else if score >= 75
+            stars := "★★★★☆"
+        else if score >= 60
+            stars := "★★★☆☆"
+        else if score >= 40
+            stars := "★★☆☆☆"
+        else
+            stars := "★☆☆☆☆"
+
+        stars 
+
+    //---------------------------------------------------------
+
+    clearDashboard() =>
+        table.clear(dashboard,0,0,1,31)
+
+    //---------------------------------------------------------
+    // PAGE 1: SUMMARY -- quick top-level read
+    //---------------------------------------------------------
+
+    drawSummary() =>
+        clearDashboard()
+
+        table.cell(
+        dashboard,
+        0,
+        0,
+        " TITAN X PROFESSIONAL ",
+        bgcolor=HEADER_BG,
+        text_color=TITLE_COLOR)
+
+        table.cell(
+        dashboard,
+        1,
+        0,
+        TITAN_BUILD,
+        bgcolor=HEADER_BG,
+        text_color=TITLE_COLOR)
+
+        table.cell(dashboard, 0, 1, "Symbol", text_color=color.white)
+        table.cell(dashboard, 1, 1, symbolName, text_color=color.white)
+
+        table.cell(dashboard, 0, 2, "TF / Asset", text_color=color.white)
+        table.cell(dashboard, 1, 2, timeframeName + " / " + assetType, text_color=color.white)
+
+        table.cell(dashboard, 0, 3, "Trend", text_color=color.white)
+        table.cell(dashboard, 1, 3, getTrendDirection(), text_color=color.white)
+
+        table.cell(dashboard, 0, 4, "Decision", text_color=color.white)
+        table.cell(dashboard, 1, 4, marketState, text_color=color.white)
+
+        table.cell(dashboard, 0, 5, "Bias", text_color=color.white)
+        table.cell(dashboard, 1, 5, marketBias, text_color=color.white)
+
+        table.cell(dashboard, 0, 6, "Trade Quality", text_color=color.white)
+        table.cell(dashboard, 1, 6, tradeQuality, text_color=color.white)
+
+        table.cell(dashboard, 0, 7, "Confidence", text_color=color.white)
+        table.cell(dashboard, 1, 7, str.tostring(math.round(confidenceScore)) + "%", text_color=color.white)
+
+        table.cell(dashboard, 0, 8, "Grade", text_color=color.white)
+        table.cell(dashboard, 1, 8, tradeGrade, text_color=color.white)
+
+        table.cell(dashboard, 0, 9, "Session", text_color=color.white)
+        table.cell(dashboard, 1, 9, activeSession, text_color=color.white)
+
+        table.cell(dashboard, 0, 10, "Kill Zone", text_color=color.white)
+        table.cell(dashboard, 1, 10,
+            londonKillZone ? "LONDON" :
+            newYorkKillZone ? "NEW YORK" : "-", text_color=color.white)
+
+        table.cell(dashboard, 0, 11, "Ready", text_color=color.white)
+        table.cell(dashboard, 1, 11, confluenceScore >= 80 ? "YES" : "WAIT", text_color=color.white)
+            //====================================================
+        // AI DECISION
+        //====================================================
+
+        table.cell(dashboard,0,20,"AI Signal")
+        table.cell(dashboard,1,20,getAISignal())
+
+        table.cell(dashboard,0,21,"Confidence")
+        table.cell(dashboard,1,21,str.tostring(math.round(confidenceScore))+"%")
+
+        table.cell(dashboard,0,22,"Trend")
+        table.cell(dashboard,1,22,getStars(trendScore))
+
+        table.cell(dashboard,0,23,"Structure")
+        table.cell(dashboard,1,23,getStars(structureScore))
+
+        table.cell(dashboard,0,24,"Liquidity")
+        table.cell(dashboard,1,24,getStars(liquidityScore))
+
+        table.cell(dashboard,0,25,"HTF")
+        table.cell(dashboard,1,25,getStars(mtfScore))
+
+        table.cell(dashboard,0,26,"Risk")
+        table.cell(dashboard,1,26,getRiskLevel())
+        //====================================================
+    // PROFESSIONAL AI PANEL
+    //====================================================
+
+    table.cell(dashboard,0,27,"Trend ★")
+    table.cell(dashboard,1,27,getStars(trendScore))
+
+    table.cell(dashboard,0,28,"Structure ★")
+    table.cell(dashboard,1,28,getStars(structureScore))
+
+    table.cell(dashboard,0,29,"Liquidity ★")
+    table.cell(dashboard,1,29,getStars(liquidityScore))
+
+    table.cell(dashboard,0,30,"HTF ★")
+    table.cell(dashboard,1,30,getStars(mtfScore))
+
+    table.cell(dashboard,0,31,"Signal")
+    color signalColor =
+        getAISignal()=="STRONG BUY" ? BUY_BG :
+        getAISignal()=="BUY" ? color.green :
+        getAISignal()=="WAIT" ? WAIT_BG :
+        getAISignal()=="SELL" ? color.orange :
+        SELL_BG
+
+    table.cell(
+        dashboard,
+        1,
+        31,
+        getAISignal(),
+        bgcolor=signalColor,
+        text_color=color.white)
+
+    //---------------------------------------------------------
+    // PAGE 2: STRUCTURE -- market structure / liquidity
+    //---------------------------------------------------------
+
+    drawStructure() =>
+        clearDashboard()
+
+        table.cell(dashboard, 0, 0, "TITAN X — STRUCTURE", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+        table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+        table.cell(dashboard, 0, 1, "Structure", text_color=color.white)
+        table.cell(dashboard, 1, 1, structureDirection, text_color=color.white)
+
+        table.cell(dashboard, 0, 2, "Struct Score", text_color=color.white)
+        table.cell(dashboard, 1, 2, str.tostring(math.round(structureScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 3, "BOS", text_color=color.white)
+        table.cell(dashboard, 1, 3, bullBOS ? "BULL" : bearBOS ? "BEAR" : "-", text_color=color.white)
+
+        table.cell(dashboard, 0, 4, "CHOCH", text_color=color.white)
+        table.cell(dashboard, 1, 4, bullCHOCH ? "BULL" : bearCHOCH ? "BEAR" : "-", text_color=color.white)
+
+        table.cell(dashboard, 0, 5, "EQH / EQL", text_color=color.white)
+        table.cell(dashboard, 1, 5, (eqHighDetected ? "EQH " : "") + (eqLowDetected ? "EQL" : (eqHighDetected ? "" : "-")), text_color=color.white)
+
+        table.cell(dashboard, 0, 6, "Liquidity Score", text_color=color.white)
+        table.cell(dashboard, 1, 6, str.tostring(math.round(liquidityScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 7, "Sweep", text_color=color.white)
+        table.cell(dashboard, 1, 7, bullSweep ? "BULL" : bearSweep ? "BEAR" : "-", text_color=color.white)
+
+        table.cell(dashboard, 0, 8, "Sweep Score", text_color=color.white)
+        table.cell(dashboard, 1, 8, str.tostring(math.round(sweepScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 9, "Confluence", text_color=color.white)
+        table.cell(dashboard, 1, 9, str.tostring(math.round(confluenceScore)), text_color=color.white)
+
+    //---------------------------------------------------------
+    // PAGE 3: SMART MONEY -- FVG / OB / PD / HTF
+    //---------------------------------------------------------
+
+    drawSmartMoney() =>
+        clearDashboard()
+
+        table.cell(dashboard, 0, 0, "TITAN X — SMART MONEY", text_color=color.white, bgcolor=color.new(#2962ff, 0))
+        table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+
+        table.cell(dashboard, 0, 1, "Bull / Bear FVG", text_color=color.white)
+        table.cell(dashboard, 1, 1, (bullFVG ? "BULL " : "") + (bearFVG ? "BEAR" : (bullFVG ? "" : "-")), text_color=color.white)
+
+        table.cell(dashboard, 0, 2, "FVG Score", text_color=color.white)
+        table.cell(dashboard, 1, 2, str.tostring(math.round(fvgScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 3, "Bull / Bear OB", text_color=color.white)
+        table.cell(dashboard, 1, 3, (bullOB ? "BULL " : "") + (bearOB ? "BEAR" : (bullOB ? "" : "-")), text_color=color.white)
+
+        table.cell(dashboard, 0, 4, "OB Score", text_color=color.white)
+        table.cell(dashboard, 1, 4, str.tostring(math.round(orderBlockScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 5, "PD Zone", text_color=color.white)
+        table.cell(dashboard, 1, 5, pdState, text_color=color.white)
+
+        table.cell(dashboard, 0, 6, "PD Score", text_color=color.white)
+        table.cell(dashboard, 1, 6, str.tostring(math.round(pdScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 7, "Equilibrium", text_color=color.white)
+        table.cell(dashboard, 1, 7, str.tostring(math.round(equilibriumLevel)), text_color=color.white)
+
+        table.cell(dashboard, 0, 8, "HTF Trend", text_color=color.white)
+        table.cell(dashboard, 1, 8, htfTrend, text_color=color.white)
+
+        table.cell(dashboard, 0, 9, "MTF Score", text_color=color.white)
+        table.cell(dashboard, 1, 9, str.tostring(math.round(mtfScore)), text_color=color.white)
+
+        table.cell(dashboard, 0, 10, "MTF Align", text_color=color.white)
+        table.cell(dashboard, 1, 10, mtfScore >= 50 ? "YES" : "NO", text_color=color.white)
+
+    //---------------------------------------------------------
+    // PAGE 4: EXECUTION -- entries, SL/TP, allow flags
+    //---------------------------------------------------------
+
+    drawExecution() =>
+
+        clearDashboard()
+
+        //====================================================
+        // HEADER
+        //====================================================
+
+        table.cell(dashboard,0,0," TITAN X — EXECUTION ",bgcolor=HEADER_BG,text_color=TITLE_COLOR)
+        table.cell(dashboard,1,0,TITAN_BUILD,bgcolor=HEADER_BG,text_color=TITLE_COLOR)
+
+        //====================================================
+        // SIGNAL
+        //====================================================
+
+        table.cell(dashboard,0,1,"Signal",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,1,getAISignal(),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,2,"Entry",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,2,str.tostring(entryPrice),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,3,"Stop Loss",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,3,str.tostring(stopLoss),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,4,"TP1",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,4,str.tostring(takeProfit1),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,5,"TP2",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,5,str.tostring(takeProfit2),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,6,"TP3",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,6,str.tostring(takeProfit3),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,7,"Risk : Reward",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,7,"1 : "+str.tostring(riskReward),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,8,"Status",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,8,executionStatus,text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,9,"Execution",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,9,"MANUAL",text_color=VALUE_COLOR)
+
+        //====================================================
+    // TRADE VALIDATION
+    //====================================================
+
+    table.cell(dashboard,0,10,"Institutional",text_color=LABEL_COLOR)
+    table.cell(
+        dashboard,
+        1,
+        10,
+        str.tostring(getInstitutionalScore())+" / 8",
+        text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,11,"Confidence",text_color=LABEL_COLOR)
+    table.cell(
+        dashboard,
+        1,
+        11,
+        str.tostring(math.round(confidenceScore))+"%",
+        text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,12,"Trade Grade",text_color=LABEL_COLOR)
+    table.cell(
+        dashboard,
+        1,
+        12,
+        tradeGrade,
+        text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,13,"Risk",text_color=LABEL_COLOR)
+    table.cell(
+        dashboard,
+        1,
+        13,
+        riskRating,
+        text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,14,"Decision",text_color=LABEL_COLOR)
+    table.cell(
+        dashboard,
+        1,
+        14,
+        executionStatus,
+        text_color=VALUE_COLOR)
+    //---------------------------------------------------------
+    // PAGE 5: STATISTICS -- all scoring components + final score
+    //---------------------------------------------------------
+
+    drawStatistics() =>
+
+        clearDashboard()
+
+        //====================================================
+        // HEADER
+        //====================================================
+
+        table.cell(dashboard,0,0," TITAN X — STATISTICS ",
+            bgcolor=HEADER_BG,
+            text_color=TITLE_COLOR)
+
+        table.cell(dashboard,1,0,TITAN_BUILD,
+            bgcolor=HEADER_BG,
+            text_color=TITLE_COLOR)
+
+        //----------------------------------------------------
+        // ENGINE SCORES
+        //----------------------------------------------------
+
+        table.cell(dashboard,0,1,"Trend Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,1,str.tostring(math.round(trendScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,2,"Structure Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,2,str.tostring(math.round(structureScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,3,"Liquidity Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,3,str.tostring(math.round(liquidityScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,4,"Sweep Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,4,str.tostring(math.round(sweepScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,5,"HTF Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,5,str.tostring(math.round(mtfScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,6,"FVG Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,6,str.tostring(math.round(fvgScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,7,"Order Block",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,7,str.tostring(math.round(orderBlockScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,8,"PD Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,8,str.tostring(math.round(pdScore)),text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,9,"Session",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,9,activeSession,text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,10,"Confidence",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,10,str.tostring(math.round(confidenceScore))+"%",text_color=VALUE_COLOR)
+
+        table.cell(dashboard,0,11,"Final Score",text_color=LABEL_COLOR)
+        table.cell(dashboard,1,11,str.tostring(math.round(finalScore)),text_color=VALUE_COLOR)
+
+    //---------------------------------------------------------
+    // PAGE 6: DEBUG -- raw internal values for troubleshooting
+    //---------------------------------------------------------
+
+    drawDebug() =>
+
+        clearDashboard()
+
+        //====================================================
+        // HEADER
+        //====================================================
+
+        table.cell(dashboard,0,0," TITAN X — DEBUG ",
+            bgcolor=HEADER_BG,
+            text_color=TITLE_COLOR)
+
+        table.cell(dashboard,1,0,TITAN_BUILD,
+            bgcolor=HEADER_BG,
+            text_color=TITLE_COLOR)
+
+            //====================================================
+        // ENGINE STATUS
+        //====================================================
+
+        table.cell(dashboard,0,1,"Trend")
+        table.cell(dashboard,1,1,str.tostring(math.round(trendScore)))
+
+        table.cell(dashboard,0,2,"Structure")
+        table.cell(dashboard,1,2,str.tostring(math.round(structureScore)))
+
+        table.cell(dashboard,0,3,"Liquidity")
+        table.cell(dashboard,1,3,str.tostring(math.round(liquidityScore)))
+
+        table.cell(dashboard,0,4,"Sweep")
+        table.cell(dashboard,1,4,str.tostring(math.round(sweepScore)))
+
+        table.cell(dashboard,0,5,"MTF")
+        table.cell(dashboard,1,5,str.tostring(math.round(mtfScore)))
+
+        table.cell(dashboard,0,6,"FVG")
+        table.cell(dashboard,1,6,str.tostring(math.round(fvgScore)))
+
+        table.cell(dashboard,0,7,"Order Block")
+        table.cell(dashboard,1,7,str.tostring(math.round(orderBlockScore)))
+
+        table.cell(dashboard,0,8,"PD")
+        table.cell(dashboard,1,8,str.tostring(math.round(pdScore)))
+
+        table.cell(dashboard,0,9,"Session")
+        table.cell(dashboard,1,9,activeSession)
+
+        table.cell(dashboard,0,10,"Confidence")
+        table.cell(dashboard,1,10,str.tostring(math.round(confidenceScore))+"%")
+
+        table.cell(dashboard,0,11,"Final Score")
+        table.cell(dashboard,1,11,str.tostring(math.round(finalScore)))
+
+        table.cell(dashboard,0,12,"Market State")
+        table.cell(dashboard,1,12,marketState)
+
+        table.cell(dashboard,0,13,"Trade Ready")
+        table.cell(dashboard,1,13,tradeReady ? "YES" : "NO")
+
+        table.cell(dashboard,0,14,"Execution")
+        table.cell(dashboard,1,14,executionStatus)
+
+        table.cell(dashboard,0,15,"Risk")
+        table.cell(dashboard,1,15,riskRating)
+        //====================================================
+    // INSTITUTIONAL VALIDATION
+    //====================================================
+
+        table.cell(dashboard,0,16,"Institutional")
+        table.cell(dashboard,1,16,str.tostring(getInstitutionalScore()) + " / 8")
+
+        table.cell(dashboard,0,17,"Trend")
+        table.cell(dashboard,1,17,getTrendCheck())
+
+        table.cell(dashboard,0,18,"Structure")
+        table.cell(dashboard,1,18,getStructureCheck())
+
+        table.cell(dashboard,0,19,"BOS / CHOCH")
+        table.cell(dashboard,1,19,getBOSCheck())
+
+        table.cell(dashboard,0,20,"Liquidity")
+        table.cell(dashboard,1,20,getLiquidityCheck())
+
+        table.cell(dashboard,0,21,"HTF")
+        table.cell(dashboard,1,21,getHTFCheck())
+
+        table.cell(dashboard,0,22,"FVG")
+        table.cell(dashboard,1,22,getFVGCheck())
+
+        table.cell(dashboard,0,23,"Order Block")
+        table.cell(dashboard,1,23,getOBCheck())
+
+        table.cell(dashboard,0,24,"Session")
+        table.cell(dashboard,1,24,getSessionCheck())
+
+    clearTradeBox() =>
+        table.clear(tradeBox, 0, 0, 1, 9)
+        
+    drawTradeBox() =>
+
+        clearTradeBox()
+
+        table.cell(tradeBox,0,0,"TITAN X SETUP")
+
+        table.cell(tradeBox,0,1,"Signal")
+        table.cell(tradeBox,1,1,marketState)
+
+        table.cell(tradeBox,0,2,"Entry")
+        table.cell(tradeBox,1,2,str.tostring(entryPrice))
+
+        table.cell(tradeBox,0,3,"SL")
+        table.cell(tradeBox,1,3,str.tostring(stopLoss))
+
+        table.cell(tradeBox,0,4,"TP1")
+        table.cell(tradeBox,1,4,str.tostring(takeProfit1))
+
+        table.cell(tradeBox,0,5,"TP2")
+        table.cell(tradeBox,1,5,str.tostring(takeProfit2))
+
+        table.cell(tradeBox,0,6,"TP3")
+        table.cell(tradeBox,1,6,str.tostring(takeProfit3))
+
+        table.cell(tradeBox,0,7,"R:R")
+        table.cell(tradeBox,1,7,"1 : "+str.tostring(riskReward))
+
+        table.cell(tradeBox,0,8,"Status")
+        table.cell(tradeBox,1,8,executionStatus)
+
+        table.cell(tradeBox,0,9,"Ready")
+        table.cell(tradeBox,1,9,tradeReady ? "YES" : "NO")
+    //---------------------------------------------------------
+
+    updateDashboard() =>
+
+        if dashboardPage == "SUMMARY"
+            drawSummary()
+
+        else if dashboardPage == "STRUCTURE"
+            drawStructure()
+
+        else if dashboardPage == "SMART MONEY"
+            drawSmartMoney()
+
+        else if dashboardPage == "EXECUTION"
+            drawExecution()
+
+        else if dashboardPage == "STATISTICS"
+            drawStatistics()
 
         else
+            drawDebug()
 
-            structureDirection := "LL"
-            structureScore := math.max(structureScore - 15, 0)
 
-            if showStructureLabels
+    //=============================================================================
+    // LOGGER
+    //=============================================================================
+
+    log(message)=>
+
+        if debugMode and barstate.islast
+            label.new(
+                bar_index,
+                high,
+                message,
+                style=label.style_label_down)
+
+    //=============================================================================
+    // ENGINE PLACEHOLDERS
+    //=============================================================================
+
+    //=============================================================================
+    // TREND ENGINE
+    //=============================================================================
+
+    // EMAs
+    ema20  = ta.ema(close,20)
+    ema50  = ta.ema(close,50)
+    ema100 = ta.ema(close,100)
+    ema200 = ta.ema(close,200)
+
+    //------------------------------------------------------------
+    // Trend Score
+    //------------------------------------------------------------
+    calculateTrend()=>
+
+        float score = 0
+
+        // EMA Alignment
+        score += ema20 > ema50 ? 15 : 0
+        score += ema50 > ema100 ? 15 : 0
+        score += ema100 > ema200 ? 15 : 0
+
+        // Price Position
+        score += close > ema20 ? 10 : 0
+        score += close > ema50 ? 10 : 0
+        score += close > ema100 ? 10 : 0
+        score += close > ema200 ? 10 : 0
+
+        // EMA Slope
+        score += ema20 > ema20[1] ? 5 : 0
+        score += ema50 > ema50[1] ? 5 : 0
+        score += ema100 > ema100[1] ? 3 : 0
+        score += ema200 > ema200[1] ? 2 : 0
+
+        score
+        //=============================================================================
+    // HIGHER TIMEFRAME DATA
+    //=============================================================================
+
+    if enableMTF
+
+        htfEMA20 := request.security(
+            syminfo.tickerid,
+            higherTF,
+            ta.ema(close,20))
+
+        htfEMA50 := request.security(
+            syminfo.tickerid,
+            higherTF,
+            ta.ema(close,50))
+
+        htfBullish := htfEMA20 > htfEMA50
+        htfBearish := htfEMA20 < htfEMA50
+
+    //------------------------------------------------------------
+    // Confidence
+    //------------------------------------------------------------
+    calculateConfidence()=>
+
+        float confidence = 0
+
+        confidence += trendScore * 0.30
+        confidence += structureScore * 0.20
+        confidence += liquidityScore * 0.15
+        confidence += sweepScore * 0.10
+        confidence += mtfScore * 0.10
+        confidence += fvgScore * 0.05
+        confidence += pdScore * 0.05
+        confidence += sessionScore * 0.05
+
+        math.min(confidence,100)
+
+
+    //==============================================================
+    // FINAL SCORE ENGINE
+    //==============================================================
+
+    calculateFinalScore()=>
+
+        float finalScore = 0.0
+
+        //----------------------------------------------------------
+        // Trend (25%)
+        //----------------------------------------------------------
+        finalScore += math.max(trendScore,0) * 0.25
+
+        //----------------------------------------------------------
+        // Structure (15%)
+        //----------------------------------------------------------
+        finalScore += math.max(structureScore,0) * 0.15
+
+        //----------------------------------------------------------
+        // Liquidity (10%)
+        //----------------------------------------------------------
+        finalScore += math.max(liquidityScore,0) * 0.10
+
+        //----------------------------------------------------------
+        // Sweep (10%)
+        //----------------------------------------------------------
+        finalScore += math.max(sweepScore,0) * 0.10
+
+        //----------------------------------------------------------
+        // Higher Timeframe (10%)
+        //----------------------------------------------------------
+        finalScore += math.max(mtfScore,0) * 0.10
+
+        //----------------------------------------------------------
+        // Fair Value Gap (8%)
+        //----------------------------------------------------------
+        finalScore += math.max(fvgScore,0) * 0.08
+
+        //----------------------------------------------------------
+        // Order Block (7%)
+        //----------------------------------------------------------
+        finalScore += math.max(orderBlockScore,0) * 0.07
+
+        //----------------------------------------------------------
+        // Premium / Discount (5%)
+        //----------------------------------------------------------
+        finalScore += math.max(pdScore,0) * 0.05
+
+        //----------------------------------------------------------
+        // Session (5%)
+        //----------------------------------------------------------
+        finalScore += math.max(sessionScore,0) * 0.05
+
+        //----------------------------------------------------------
+        // Clamp
+        //----------------------------------------------------------
+        math.min(finalScore,100)
+        //==============================================================
+
+    //------------------------------------------------------------
+    // Decision
+    //------------------------------------------------------------
+    //==============================================================
+    // SMART DECISION ENGINE
+    //==============================================================
+
+    calculateSmartDecision()=>
+
+        float score = calculateFinalScore()
+
+        string result = "WAIT"
+
+        if allowLong and score >= 85
+            result := "STRONG BUY"
+
+        else if allowLong
+            result := "BUY"
+
+        else if allowShort and score <=15
+            result := "STRONG SELL"
+
+        else if allowShort
+            result := "SELL"
+
+        else
+            result := "WAIT"
+
+        result
+
+    //------------------------------------------------------------
+    // Trend Direction
+    //------------------------------------------------------------
+
+        //=============================================================================
+    // SMART MARKET STRUCTURE ENGINE
+    //=============================================================================
+
+    pivotHigh = ta.pivothigh(high, pivotLeft, pivotRight)
+    pivotLow  = ta.pivotlow(low, pivotLeft, pivotRight)
+
+    if not na(pivotHigh)
+
+        if not na(lastSwingHigh)
+
+            if pivotHigh > lastSwingHigh
+
+                structureDirection := "HH"
+
+                structureScore := math.min(structureScore + 15, 100)
+
+                if showStructureLabels
+                    label.new(
+                        bar_index-pivotRight,
+                        pivotHigh,
+                        "HH",
+                        style=label.style_label_down,
+                        color=color.green,
+                        textcolor=color.white)
+
+            else
+
+                structureDirection := "LH"
+
+                structureScore := math.max(structureScore - 15, 0)
+
+                if showStructureLabels
+                    label.new(
+                        bar_index-pivotRight,
+                        pivotHigh,
+                        "LH",
+                        style=label.style_label_down,
+                        color=color.red,
+                        textcolor=color.white)
+
+        previousSwingHigh := lastSwingHigh
+        lastSwingHigh := pivotHigh
+
+    //------------------------------------------------------
+
+    //------------------------------------------------------
+    // LOW STRUCTURE
+    //------------------------------------------------------
+
+    if not na(pivotLow)
+
+        if not na(lastSwingLow)
+
+            if pivotLow > lastSwingLow
+
+                structureDirection := "HL"
+                structureScore := math.min(structureScore + 15, 100)
+
+                if showStructureLabels
+                    label.new(
+                        bar_index - pivotRight,
+                        pivotLow,
+                        "HL",
+                        style = label.style_label_up,
+                        color = color.green,
+                        textcolor = color.white
+                    )
+
+            else
+
+                structureDirection := "LL"
+                structureScore := math.max(structureScore - 15, 0)
+
+                if showStructureLabels
+                    label.new(
+                        bar_index - pivotRight,
+                        pivotLow,
+                        "LL",
+                        style = label.style_label_up,
+                        color = color.red,
+                        textcolor = color.white
+                    )
+
+        previousSwingLow := lastSwingLow
+        lastSwingLow := pivotLow
+        //=============================================================================
+    // LIQUIDITY ENGINE
+    //=============================================================================
+
+    eqHighDetected := false
+    eqLowDetected := false
+
+    if not na(lastSwingHigh) and not na(previousSwingHigh)
+
+        float highDiff =
+            math.abs(lastSwingHigh - previousSwingHigh)
+
+        float highTolerance =
+            lastSwingHigh * eqTolerance / 100
+
+        if highDiff <= highTolerance
+
+            eqHighDetected := true
+            equalHighPrice := lastSwingHigh
+
+            liquidityScore :=
+                math.min(liquidityScore + 20, 100)
+
+            if showLiquidityLabels
                 label.new(
-                    bar_index - pivotRight,
-                    pivotLow,
-                    "LL",
+                    bar_index,
+                    equalHighPrice,
+                    "EQH",
+                    style = label.style_label_down,
+                    color = color.orange,
+                    textcolor = color.white)
+
+    if not na(lastSwingLow) and not na(previousSwingLow)
+
+        float lowDiff =
+            math.abs(lastSwingLow - previousSwingLow)
+
+        float lowTolerance =
+            lastSwingLow * eqTolerance / 100
+
+        if lowDiff <= lowTolerance
+
+            eqLowDetected := true
+            equalLowPrice := lastSwingLow
+
+            liquidityScore :=
+                math.min(liquidityScore + 20,100)
+
+            if showLiquidityLabels
+                label.new(
+                    bar_index,
+                    equalLowPrice,
+                    "EQL",
                     style = label.style_label_up,
+                    color = color.orange,
+                    textcolor = color.white)
+                    //=============================================================================
+    // LIQUIDITY SWEEP ENGINE
+    //=============================================================================
+
+    bullSweep := false
+    bearSweep := false
+
+    //------------------------------------
+    // Bearish Sweep
+    //------------------------------------
+
+    if eqHighDetected
+
+        if high > equalHighPrice and close < equalHighPrice
+
+            bearSweep := true
+            lastSweepPrice := high
+
+            sweepScore := math.min(sweepScore + 40, 100)
+
+            if showLiquidityLabels
+                label.new(
+                    bar_index,
+                    high,
+                    "Bear Sweep",
+                    style = label.style_label_down,
                     color = color.red,
-                    textcolor = color.white
-                )
+                    textcolor = color.white)
 
-    previousSwingLow := lastSwingLow
-    lastSwingLow := pivotLow
+    //------------------------------------
+    // Bullish Sweep
+    //------------------------------------
+
+    if eqLowDetected
+
+        if low < equalLowPrice and close > equalLowPrice
+
+            bullSweep := true
+            lastSweepPrice := low
+
+            sweepScore := math.min(sweepScore + 40, 100)
+
+            if showLiquidityLabels
+                label.new(
+                    bar_index,
+                    low,
+                    "Bull Sweep",
+                    style = label.style_label_up,
+                    color = color.lime,
+                    textcolor = color.black)
+                    //=============================================================================
+    // CONFLUENCE ENGINE
     //=============================================================================
-// LIQUIDITY ENGINE
-//=============================================================================
 
-eqHighDetected := false
-eqLowDetected := false
+    confluenceScore := 0
 
-if not na(lastSwingHigh) and not na(previousSwingHigh)
+    //----------------------------------------------------
+    // Trend
+    //----------------------------------------------------
 
-    float highDiff =
-         math.abs(lastSwingHigh - previousSwingHigh)
+    trendAligned := trendScore >= 70
 
-    float highTolerance =
-         lastSwingHigh * eqTolerance / 100
+    if trendAligned
+        confluenceScore += 30
 
-    if highDiff <= highTolerance
+    //----------------------------------------------------
+    // Structure
+    //----------------------------------------------------
 
-        eqHighDetected := true
-        equalHighPrice := lastSwingHigh
+    structureAligned :=
+        structureDirection == "HH" or
+        structureDirection == "HL"
 
-        liquidityScore :=
-             math.min(liquidityScore + 20, 100)
+    if structureAligned
+        confluenceScore += 30
 
-        if showLiquidityLabels
-            label.new(
-                 bar_index,
-                 equalHighPrice,
-                 "EQH",
-                 style = label.style_label_down,
-                 color = color.orange,
-                 textcolor = color.white)
+    //----------------------------------------------------
+    // Liquidity
+    //----------------------------------------------------
 
-if not na(lastSwingLow) and not na(previousSwingLow)
+    liquidityAligned :=
+        bullSweep or
+        bearSweep or
+        eqHighDetected or
+        eqLowDetected
 
-    float lowDiff =
-         math.abs(lastSwingLow - previousSwingLow)
+    if liquidityAligned
+        confluenceScore += 40
 
-    float lowTolerance =
-         lastSwingLow * eqTolerance / 100
+    //----------------------------------------------------
+    // Market Bias
+    //----------------------------------------------------
 
-    if lowDiff <= lowTolerance
+    marketBias := "NEUTRAL"
 
-        eqLowDetected := true
-        equalLowPrice := lastSwingLow
+    if confluenceScore >= 80
+        marketBias := "BULLISH"
 
-        liquidityScore :=
-             math.min(liquidityScore + 20,100)
-
-        if showLiquidityLabels
-            label.new(
-                 bar_index,
-                 equalLowPrice,
-                 "EQL",
-                 style = label.style_label_up,
-                 color = color.orange,
-                 textcolor = color.white)
-                 //=============================================================================
-// LIQUIDITY SWEEP ENGINE
-//=============================================================================
-
-bullSweep := false
-bearSweep := false
-
-//------------------------------------
-// Bearish Sweep
-//------------------------------------
-
-if eqHighDetected
-
-    if high > equalHighPrice and close < equalHighPrice
-
-        bearSweep := true
-        lastSweepPrice := high
-
-        sweepScore := math.min(sweepScore + 40, 100)
-
-        if showLiquidityLabels
-            label.new(
-                 bar_index,
-                 high,
-                 "Bear Sweep",
-                 style = label.style_label_down,
-                 color = color.red,
-                 textcolor = color.white)
-
-//------------------------------------
-// Bullish Sweep
-//------------------------------------
-
-if eqLowDetected
-
-    if low < equalLowPrice and close > equalLowPrice
-
-        bullSweep := true
-        lastSweepPrice := low
-
-        sweepScore := math.min(sweepScore + 40, 100)
-
-        if showLiquidityLabels
-            label.new(
-                 bar_index,
-                 low,
-                 "Bull Sweep",
-                 style = label.style_label_up,
-                 color = color.lime,
-                 textcolor = color.black)
-                 //=============================================================================
-// CONFLUENCE ENGINE
-//=============================================================================
-
-confluenceScore := 0
-
-//----------------------------------------------------
-// Trend
-//----------------------------------------------------
-
-trendAligned := trendScore >= 70
-
-if trendAligned
-    confluenceScore += 30
-
-//----------------------------------------------------
-// Structure
-//----------------------------------------------------
-
-structureAligned :=
-     structureDirection == "HH" or
-     structureDirection == "HL"
-
-if structureAligned
-    confluenceScore += 30
-
-//----------------------------------------------------
-// Liquidity
-//----------------------------------------------------
-
-liquidityAligned :=
-     bullSweep or
-     bearSweep or
-     eqHighDetected or
-     eqLowDetected
-
-if liquidityAligned
-    confluenceScore += 40
-
-//----------------------------------------------------
-// Market Bias
-//----------------------------------------------------
-
-marketBias := "NEUTRAL"
-
-if confluenceScore >= 80
-    marketBias := "BULLISH"
-
-else if confluenceScore <= 20
-    marketBias := "BEARISH"
+    else if confluenceScore <= 20
+        marketBias := "BEARISH"
+        //=============================================================================
+    // MTF ENGINE
     //=============================================================================
-// MTF ENGINE
-//=============================================================================
 
-mtfScore := 0
+    mtfScore := 0
 
-if enableMTF
+    if enableMTF
+
+        if htfBullish
+            mtfScore += 50
+
+        if htfBearish
+            mtfScore -= 50
+
+        if htfBullish and trendScore >= 70
+            mtfScore += 50
+
+        if htfBearish and trendScore <= 30
+            mtfScore -= 50
+
+    if mtfScore > 100
+        mtfScore := 100
+
+    if mtfScore < -100
+        mtfScore := -100
 
     if htfBullish
-        mtfScore += 50
+        htfTrend := "BULLISH"
 
-    if htfBearish
-        mtfScore -= 50
+    else if htfBearish
+        htfTrend := "BEARISH"
 
-    if htfBullish and trendScore >= 70
-        mtfScore += 50
-
-    if htfBearish and trendScore <= 30
-        mtfScore -= 50
-
-if mtfScore > 100
-    mtfScore := 100
-
-if mtfScore < -100
-    mtfScore := -100
-
-if htfBullish
-    htfTrend := "BULLISH"
-
-else if htfBearish
-    htfTrend := "BEARISH"
-
-else
-    htfTrend := "SIDEWAYS"
+    else
+        htfTrend := "SIDEWAYS"
+        //=============================================================================
+    // FAIR VALUE GAP ENGINE
     //=============================================================================
-// FAIR VALUE GAP ENGINE
-//=============================================================================
 
-bullFVG := false
-bearFVG := false
+    bullFVG := false
+    bearFVG := false
 
-//-------------------------------------
-// Bullish FVG
-//-------------------------------------
+    //-------------------------------------
+    // Bullish FVG
+    //-------------------------------------
 
-if low > high[2]
+    if low > high[2]
 
-    gapSize = (low - high[2]) / syminfo.mintick
+        gapSize = (low - high[2]) / syminfo.mintick
 
-    if gapSize >= minFVGTicks
+        if gapSize >= minFVGTicks
 
-        bullFVG := true
+            bullFVG := true
 
-        bullFVGHigh := low
-        bullFVGLow := high[2]
+            bullFVGHigh := low
+            bullFVGLow := high[2]
 
-        fvgScore := math.min(fvgScore + 20,100)
+            fvgScore := math.min(fvgScore + 20,100)
 
-        if showFVG
+            if showFVG
+                box.new(
+                    bar_index-2,
+                    low,
+                    bar_index,
+                    high[2],
+                    bgcolor=color.new(color.green,85),
+                    border_color=color.green)
+
+    //-------------------------------------
+    // Bearish FVG
+    //-------------------------------------
+
+    if high < low[2]
+
+        gapSize = (low[2]-high)/syminfo.mintick
+
+        if gapSize >= minFVGTicks
+
+            bearFVG := true
+
+            bearFVGHigh := low[2]
+            bearFVGLow := high
+
+            fvgScore := math.min(fvgScore+20,100)
+
+            if showFVG
+                box.new(
+                    bar_index-2,
+                    low[2],
+                    bar_index,
+                    high,
+                    bgcolor=color.new(color.red,85),
+                    border_color=color.red)
+                    //=============================================================================
+    // ORDER BLOCK ENGINE
+    //=============================================================================
+
+    bullOB := false
+    bearOB := false
+
+    //--------------------------------------------------
+    // Bullish Order Block
+    //--------------------------------------------------
+
+    if ta.lowest(low, obLookback) == low and close > open
+
+        bullOB := true
+
+        bullOBHigh := high
+        bullOBLow := low
+
+        orderBlockScore := math.min(orderBlockScore + 15, 100)
+
+        if showOrderBlocks
             box.new(
-                 bar_index-2,
-                 low,
-                 bar_index,
-                 high[2],
-                 bgcolor=color.new(color.green,85),
-                 border_color=color.green)
+                bar_index,
+                high,
+                bar_index + 5,
+                low,
+                bgcolor = color.new(color.green, 85),
+                border_color = color.green)
 
-//-------------------------------------
-// Bearish FVG
-//-------------------------------------
+    //--------------------------------------------------
+    // Bearish Order Block
+    //--------------------------------------------------
 
-if high < low[2]
+    if ta.highest(high, obLookback) == high and close < open
 
-    gapSize = (low[2]-high)/syminfo.mintick
+        bearOB := true
 
-    if gapSize >= minFVGTicks
+        bearOBHigh := high
+        bearOBLow := low
 
-        bearFVG := true
+        orderBlockScore := math.min(orderBlockScore + 15, 100)
 
-        bearFVGHigh := low[2]
-        bearFVGLow := high
-
-        fvgScore := math.min(fvgScore+20,100)
-
-        if showFVG
+        if showOrderBlocks
             box.new(
-                 bar_index-2,
-                 low[2],
-                 bar_index,
-                 high,
-                 bgcolor=color.new(color.red,85),
-                 border_color=color.red)
+                bar_index,
+                high,
+                bar_index + 5,
+                low,
+                bgcolor = color.new(color.red, 85),
+                border_color = color.red)
                 //=============================================================================
-// ORDER BLOCK ENGINE
-//=============================================================================
+    // PREMIUM / DISCOUNT ENGINE
+    //=============================================================================
 
-bullOB := false
-bearOB := false
+    swingHigh = ta.highest(high, pdLookback)
+    swingLow  = ta.lowest(low, pdLookback)
 
-//--------------------------------------------------
-// Bullish Order Block
-//--------------------------------------------------
+    priceRange = swingHigh - swingLow
 
-if ta.lowest(low, obLookback) == low and close > open
-
-    bullOB := true
-
-    bullOBHigh := high
-    bullOBLow := low
-
-    orderBlockScore := math.min(orderBlockScore + 15, 100)
-
-    if showOrderBlocks
-        box.new(
-            bar_index,
-            high,
-            bar_index + 5,
-            low,
-            bgcolor = color.new(color.green, 85),
-            border_color = color.green)
-
-//--------------------------------------------------
-// Bearish Order Block
-//--------------------------------------------------
-
-if ta.highest(high, obLookback) == high and close < open
-
-    bearOB := true
-
-    bearOBHigh := high
-    bearOBLow := low
-
-    orderBlockScore := math.min(orderBlockScore + 15, 100)
-
-    if showOrderBlocks
-        box.new(
-            bar_index,
-            high,
-            bar_index + 5,
-            low,
-            bgcolor = color.new(color.red, 85),
-            border_color = color.red)
-            //=============================================================================
-// PREMIUM / DISCOUNT ENGINE
-//=============================================================================
-
-swingHigh = ta.highest(high, pdLookback)
-swingLow  = ta.lowest(low, pdLookback)
-
-priceRange = swingHigh - swingLow
-
-premiumLevel := swingLow + priceRange * 0.75
-equilibriumLevel := swingLow + priceRange * 0.50
-discountLevel := swingLow + priceRange * 0.25
-pdScore := 50
-
-if close >= premiumLevel
-    pdState := "PREMIUM"
-    pdScore := 0
-
-else if close <= discountLevel
-    pdState := "DISCOUNT"
-    pdScore := 100
-
-else
-    pdState := "EQUILIBRIUM"
+    premiumLevel := swingLow + priceRange * 0.75
+    equilibriumLevel := swingLow + priceRange * 0.50
+    discountLevel := swingLow + priceRange * 0.25
     pdScore := 50
+
+    if close >= premiumLevel
+        pdState := "PREMIUM"
+        pdScore := 0
+
+    else if close <= discountLevel
+        pdState := "DISCOUNT"
+        pdScore := 100
+
+    else
+        pdState := "EQUILIBRIUM"
+        pdScore := 50
+        //=============================================================================
+    // SESSION DETECTION
     //=============================================================================
-// SESSION DETECTION
-//=============================================================================
 
-currentHour = hour(time, sessionTimezone)
+    currentHour = hour(time, sessionTimezone)
 
-asianSession := currentHour >= 0 and currentHour < 8
+    asianSession := currentHour >= 0 and currentHour < 8
 
-londonSession := currentHour >= 8 and currentHour < 16
+    londonSession := currentHour >= 8 and currentHour < 16
 
-newYorkSession := currentHour >= 13 and currentHour < 22
+    newYorkSession := currentHour >= 13 and currentHour < 22
 
-londonKillZone := currentHour >= 8 and currentHour < 10
+    londonKillZone := currentHour >= 8 and currentHour < 10
 
-newYorkKillZone := currentHour >= 13 and currentHour < 16
+    newYorkKillZone := currentHour >= 13 and currentHour < 16
 
-activeSession := "NONE"
+    activeSession := "NONE"
 
-if asianSession
-    activeSession := "ASIA"
+    if asianSession
+        activeSession := "ASIA"
 
-if londonSession
-    activeSession := "LONDON"
+    if londonSession
+        activeSession := "LONDON"
 
-if newYorkSession
-    activeSession := "NEW YORK"
-    // Session High Low
+    if newYorkSession
+        activeSession := "NEW YORK"
+        // Session High Low
 
-if activeSession != activeSession[1]
+    if activeSession != activeSession[1]
 
-    sessionHigh := high
-    sessionLow := low
+        sessionHigh := high
+        sessionLow := low
 
-else
+    else
 
-    sessionHigh := math.max(sessionHigh, high)
-    sessionLow := math.min(sessionLow, low)
-    sessionScore := 50
+        sessionHigh := math.max(sessionHigh, high)
+        sessionLow := math.min(sessionLow, low)
+        sessionScore := 50
 
-if londonKillZone
-    sessionScore := 100
+    if londonKillZone
+        sessionScore := 100
 
-else if newYorkKillZone
-    sessionScore := 95
+    else if newYorkKillZone
+        sessionScore := 95
 
-else if londonSession
-    sessionScore := 80
+    else if londonSession
+        sessionScore := 80
 
-else if newYorkSession
-    sessionScore := 75
+    else if newYorkSession
+        sessionScore := 75
 
-else if asianSession
-    sessionScore := 40
-//=============================================================================
-// BREAK OF STRUCTURE
-//=============================================================================
-
-bullBOS := false
-bearBOS := false
-
-if not na(lastSwingHigh)
-    bullBOS := close > lastSwingHigh
-
-if not na(lastSwingLow)
-    bearBOS := close < lastSwingLow
+    else if asianSession
+        sessionScore := 40
     //=============================================================================
-// CHANGE OF CHARACTER
-//=============================================================================
+    // BREAK OF STRUCTURE
+    //=============================================================================
 
-bullCHOCH := false
-bearCHOCH := false
+    bullBOS := false
+    bearBOS := false
 
-if structureDirection == "LL" and bullBOS
-    bullCHOCH := true
+    if not na(lastSwingHigh)
+        bullBOS := close > lastSwingHigh
 
-if structureDirection == "HH" and bearBOS
-    bearCHOCH := true
-//=====================================================
-// ENTRY EXECUTION ENGINE
-//=====================================================
+    if not na(lastSwingLow)
+        bearBOS := close < lastSwingLow
+        //=============================================================================
+    // CHANGE OF CHARACTER
+    //=============================================================================
 
-//=====================================================
-// INSTITUTIONAL CANDLE ENGINE
-//=====================================================
+    bullCHOCH := false
+    bearCHOCH := false
 
-//=============================================================================
-// MAIN
-//=============================================================================
+    if structureDirection == "LL" and bullBOS
+        bullCHOCH := true
 
-trendScore := calculateTrend()
-
-confidenceScore := calculateConfidence()
-
-finalScore := calculateFinalScore()
-//-----------------------------------------------------
-// TRADE QUALITY
-//-----------------------------------------------------
-
-if finalScore >= 95
-    tradeQuality := "⭐ PLATINUM"
-
-else if finalScore >= 90
-    tradeQuality := "🟢 A+"
-
-else if finalScore >= 80
-    tradeQuality := "🔵 A"
-
-else if finalScore >= 70
-    tradeQuality := "🟡 B"
-
-else if finalScore >= 60
-    tradeQuality := "🟠 C"
-
-else
-    tradeQuality := "🔴 AVOID"
-//-----------------------------------------------------
-// AI FILTER
-//-----------------------------------------------------
-
-allowLong :=
-     finalScore >= 75 and
-     trendScore >= 60 and
-     structureScore >= 60 and
-     liquidityScore >= 50 and
-     htfBullish
-
-allowShort :=
-     finalScore <= 30 and
-     trendScore <= 40 and
-     structureScore <= 40 and
-     liquidityScore >= 50 and
-     htfBearish
-     //=====================================================
-// RISK MANAGEMENT ENGINE
-//=====================================================
-
-if allowLong
-
-    stopLoss := sessionLow
-
-    risk = close - stopLoss
-
-    takeProfit1 := close + risk
-
-    takeProfit2 := close + risk * 2
-
-    takeProfit3 := close + risk * 3
-
-    riskReward := 3
-
-if allowShort
-
-    stopLoss := sessionHigh
-
-    risk = stopLoss - close
-
-    takeProfit1 := close - risk
-
-    takeProfit2 := close - risk * 2
-
-    takeProfit3 := close - risk * 3
-
-    riskReward := 3
+    if structureDirection == "HH" and bearBOS
+        bearCHOCH := true
     //=====================================================
-// ENTRY EXECUTION ENGINE
-//=====================================================
+    // ENTRY EXECUTION ENGINE
+    //=====================================================
 
-tradeReady := false
+    //=====================================================
+    // INSTITUTIONAL CANDLE ENGINE
+    //=====================================================
 
-executionStatus := "WAIT"
+    //=============================================================================
+    // MAIN
+    //=============================================================================
 
-entryPrice := na
+    trendScore := calculateTrend()
 
-if allowLong
+    confidenceScore := calculateConfidence()
 
-    if finalScore >= 80
+    finalScore := calculateFinalScore()
+    //-----------------------------------------------------
+    // TRADE QUALITY
+    //-----------------------------------------------------
 
-        tradeReady := true
+    if finalScore >= 95
+        tradeQuality := "⭐ PLATINUM"
 
-        executionStatus := "BUY READY"
+    else if finalScore >= 90
+        tradeQuality := "🟢 A+"
 
-        entryPrice := close
+    else if finalScore >= 80
+        tradeQuality := "🔵 A"
 
-if allowShort
+    else if finalScore >= 70
+        tradeQuality := "🟡 B"
 
-    if finalScore <= 25
+    else if finalScore >= 60
+        tradeQuality := "🟠 C"
 
-        tradeReady := true
+    else
+        tradeQuality := "🔴 AVOID"
+    //-----------------------------------------------------
+    // AI FILTER
+    //-----------------------------------------------------
 
-        executionStatus := "SELL READY"
+    allowLong :=
+        finalScore >= 75 and
+        trendScore >= 60 and
+        structureScore >= 60 and
+        liquidityScore >= 50 and
+        htfBullish
 
-        entryPrice := close
-//----------------------------------------------------
-// Trade Grade
-//----------------------------------------------------
+    allowShort :=
+        finalScore <= 30 and
+        trendScore <= 40 and
+        structureScore <= 40 and
+        liquidityScore >= 50 and
+        htfBearish
+        //=====================================================
+    // RISK MANAGEMENT ENGINE
+    //=====================================================
 
-if finalScore >= 90
-    tradeGrade := "A+"
-else if finalScore >= 80
-    tradeGrade := "A"
-else if finalScore >= 70
-    tradeGrade := "B"
-else if finalScore >= 60
-    tradeGrade := "C"
-else
-    tradeGrade := "D"
+    if allowLong
 
-//----------------------------------------------------
-// Entry Quality
-//----------------------------------------------------
+        stopLoss := sessionLow
 
-if finalScore >= 85
-    entryQuality := "EXCELLENT"
-else if finalScore >= 70
-    entryQuality := "GOOD"
-else if finalScore >= 50
-    entryQuality := "AVERAGE"
-else
-    entryQuality := "POOR"
+        risk = close - stopLoss
 
-//----------------------------------------------------
-// Risk Rating
-//----------------------------------------------------
+        takeProfit1 := close + risk
 
-if finalScore >= 85
-    riskRating := "LOW"
-else if finalScore >= 65
-    riskRating := "MEDIUM"
-else
-    riskRating := "HIGH"
+        takeProfit2 := close + risk * 2
 
-marketState := calculateSmartDecision()
+        takeProfit3 := close + risk * 3
 
-if showDashboard and barstate.islast
-    updateDashboard()
+        riskReward := 3
 
-if showTradeBox
-    drawTradeBox()
-    
-plot(ema20,"EMA20",color=color.orange,linewidth=2)
-plot(ema50,"EMA50",color=color.blue)
-plot(ema100,"EMA100",color=color.green)
-plot(ema200,"EMA200",color=color.red)
-plot(showPDZones ? premiumLevel : na,
-     title = "Premium",
-     color = color.red)
+    if allowShort
 
-plot(showPDZones ? equilibriumLevel : na,
-     title = "Equilibrium",
-     color = color.yellow)
+        stopLoss := sessionHigh
 
-plot(showPDZones ? discountLevel : na,
-     title = "Discount",
-     color = color.green)
-plot(showSessions ? sessionHigh : na,
-     title="Session High",
-     color=color.green)
+        risk = stopLoss - close
 
-plot(showSessions ? sessionLow : na,
-     title="Session Low",
-     color=color.red)
+        takeProfit1 := close - risk
+
+        takeProfit2 := close - risk * 2
+
+        takeProfit3 := close - risk * 3
+
+        riskReward := 3
+        //=====================================================
+    // ENTRY EXECUTION ENGINE
+    //=====================================================
+
+    tradeReady := false
+
+    executionStatus := "WAIT"
+
+    entryPrice := na
+
+    if allowLong
+
+        if finalScore >= 80
+
+            tradeReady := true
+
+            executionStatus := "BUY READY"
+
+            entryPrice := close
+
+    if allowShort
+
+        if finalScore <= 25
+
+            tradeReady := true
+
+            executionStatus := "SELL READY"
+
+            entryPrice := close
+    //----------------------------------------------------
+    // Trade Grade
+    //----------------------------------------------------
+
+    if finalScore >= 90
+        tradeGrade := "A+"
+    else if finalScore >= 80
+        tradeGrade := "A"
+    else if finalScore >= 70
+        tradeGrade := "B"
+    else if finalScore >= 60
+        tradeGrade := "C"
+    else
+        tradeGrade := "D"
+
+    //----------------------------------------------------
+    // Entry Quality
+    //----------------------------------------------------
+
+    if finalScore >= 85
+        entryQuality := "EXCELLENT"
+    else if finalScore >= 70
+        entryQuality := "GOOD"
+    else if finalScore >= 50
+        entryQuality := "AVERAGE"
+    else
+        entryQuality := "POOR"
+
+    //----------------------------------------------------
+    // Risk Rating
+    //----------------------------------------------------
+
+    if finalScore >= 85
+        riskRating := "LOW"
+    else if finalScore >= 65
+        riskRating := "MEDIUM"
+    else
+        riskRating := "HIGH"
+
+    marketState := calculateSmartDecision()
+
+    if showDashboard and barstate.islast
+        updateDashboard()
+
+    if showTradeBox
+        drawTradeBox()
+        
+    plot(ema20,"EMA20",color=color.orange,linewidth=2)
+    plot(ema50,"EMA50",color=color.blue)
+    plot(ema100,"EMA100",color=color.green)
+    plot(ema200,"EMA200",color=color.red)
+    plot(showPDZones ? premiumLevel : na,
+        title = "Premium",
+        color = color.red)
+
+    plot(showPDZones ? equilibriumLevel : na,
+        title = "Equilibrium",
+        color = color.yellow)
+
+    plot(showPDZones ? discountLevel : na,
+        title = "Discount",
+        color = color.green)
+    plot(showSessions ? sessionHigh : na,
+        title="Session High",
+        color=color.green)
+
+    plot(showSessions ? sessionLow : na,
+        title="Session Low",
+        color=color.red)
