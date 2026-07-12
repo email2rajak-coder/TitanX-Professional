@@ -379,6 +379,25 @@ roundPrice(price) =>
 percent(a, b) =>
     float result = b == 0 ? 0.0 : (a / b) * 100.0
     result
+
+    //====================================================
+// PROFESSIONAL DASHBOARD COLORS
+//====================================================
+
+color HEADER_BG     = color.rgb(41,47,63)
+color PANEL_BG      = color.rgb(30,34,45)
+
+color BUY_BG        = color.rgb(0,120,0)
+color SELL_BG       = color.rgb(150,0,0)
+color WAIT_BG       = color.rgb(120,120,0)
+
+color TITLE_COLOR   = color.white
+color VALUE_COLOR   = color.white
+color LABEL_COLOR   = color.silver
+
+color GOOD_COLOR    = color.lime
+color WARNING_COLOR = color.orange
+color BAD_COLOR     = color.red
 //=============================================================================
 // DASHBOARD
 //=============================================================================
@@ -509,8 +528,21 @@ clearDashboard() =>
 drawSummary() =>
     clearDashboard()
 
-    table.cell(dashboard, 0, 0, "TITAN X — SUMMARY", text_color=color.white, bgcolor=color.new(#2962ff, 0))
-    table.cell(dashboard, 1, 0, TITAN_VERSION, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    table.cell(
+    dashboard,
+    0,
+    0,
+    " TITAN X PROFESSIONAL ",
+    bgcolor=HEADER_BG,
+    text_color=TITLE_COLOR)
+
+    table.cell(
+    dashboard,
+    1,
+    0,
+    TITAN_BUILD,
+    bgcolor=HEADER_BG,
+    text_color=TITLE_COLOR)
 
     table.cell(dashboard, 0, 1, "Symbol", text_color=color.white)
     table.cell(dashboard, 1, 1, symbolName, text_color=color.white)
@@ -587,7 +619,20 @@ table.cell(dashboard,0,30,"HTF ★")
 table.cell(dashboard,1,30,getStars(mtfScore))
 
 table.cell(dashboard,0,31,"Signal")
-table.cell(dashboard,1,31,getAISignal())
+color signalColor =
+     getAISignal()=="STRONG BUY" ? BUY_BG :
+     getAISignal()=="BUY" ? color.green :
+     getAISignal()=="WAIT" ? WAIT_BG :
+     getAISignal()=="SELL" ? color.orange :
+     SELL_BG
+
+table.cell(
+    dashboard,
+    1,
+    31,
+    getAISignal(),
+    bgcolor=signalColor,
+    text_color=color.white)
 
 //---------------------------------------------------------
 // PAGE 2: STRUCTURE -- market structure / liquidity
