@@ -3,10 +3,10 @@
 // TITAN X PROFESSIONAL
 // Core Framework
 //-----------------------------------------------------------------------------
-// Version : 0.5.1-dev
-// Build   : 0002
+// Version : 0.6.0
+// Build   : 0005
 // Module  : Core Engine
-// Status  : Development
+// Status  : Stable
 //=============================================================================
 
 indicator(
@@ -494,6 +494,63 @@ getRiskLevel() =>
         risk := "HIGH"
 
     risk
+    //====================================================
+// INSTITUTIONAL VALIDATION HELPERS
+//====================================================
+
+getTrendCheck() =>
+    trendScore >= 70 ? "✓ PASS" : "✗ FAIL"
+
+getStructureCheck() =>
+    structureScore >= 60 ? "✓ PASS" : "✗ FAIL"
+
+getLiquidityCheck() =>
+    (bullSweep or bearSweep or eqHighDetected or eqLowDetected) ? "✓ PASS" : "✗ FAIL"
+
+getHTFCheck() =>
+    (htfBullish or htfBearish) ? "✓ PASS" : "✗ FAIL"
+
+getFVGCheck() =>
+    (bullFVG or bearFVG) ? "✓ PASS" : "✗ FAIL"
+
+getOBCheck() =>
+    (bullOB or bearOB) ? "✓ PASS" : "✗ FAIL"
+
+getSessionCheck() =>
+    (londonKillZone or newYorkKillZone) ? "✓ PASS" : "✗ FAIL"
+
+getBOSCheck() =>
+    (bullBOS or bearBOS or bullCHOCH or bearCHOCH) ? "✓ PASS" : "✗ FAIL"
+
+getInstitutionalScore() =>
+
+    int score = 0
+
+    if trendScore >= 70
+        score += 1
+
+    if structureScore >= 60
+        score += 1
+
+    if bullBOS or bearBOS or bullCHOCH or bearCHOCH
+        score += 1
+
+    if bullSweep or bearSweep or eqHighDetected or eqLowDetected
+        score += 1
+
+    if htfBullish or htfBearish
+        score += 1
+
+    if bullFVG or bearFVG
+        score += 1
+
+    if bullOB or bearOB
+        score += 1
+
+    if londonKillZone or newYorkKillZone
+        score += 1
+
+    score
 
 //==================================================
 // STAR RATING
@@ -818,40 +875,99 @@ drawStatistics() =>
 //---------------------------------------------------------
 
 drawDebug() =>
+
     clearDashboard()
 
-    table.cell(dashboard, 0, 0, "TITAN X — DEBUG", text_color=color.white, bgcolor=color.new(#2962ff, 0))
-    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    //====================================================
+    // HEADER
+    //====================================================
 
-    table.cell(dashboard, 0, 1, "Bar Index", text_color=color.white)
-    table.cell(dashboard, 1, 1, str.tostring(bar_index), text_color=color.white)
+    table.cell(dashboard,0,0," TITAN X — DEBUG ",
+        bgcolor=HEADER_BG,
+        text_color=TITLE_COLOR)
 
-    table.cell(dashboard, 0, 2, "Session High", text_color=color.white)
-    table.cell(dashboard, 1, 2, str.tostring(sessionHigh), text_color=color.white)
+    table.cell(dashboard,1,0,TITAN_BUILD,
+        bgcolor=HEADER_BG,
+        text_color=TITLE_COLOR)
 
-    table.cell(dashboard, 0, 3, "Session Low", text_color=color.white)
-    table.cell(dashboard, 1, 3, str.tostring(sessionLow), text_color=color.white)
+        //====================================================
+    // ENGINE STATUS
+    //====================================================
 
-    table.cell(dashboard, 0, 4, "Last Swing High", text_color=color.white)
-    table.cell(dashboard, 1, 4, str.tostring(lastSwingHigh), text_color=color.white)
+    table.cell(dashboard,0,1,"Trend")
+    table.cell(dashboard,1,1,str.tostring(math.round(trendScore)))
 
-    table.cell(dashboard, 0, 5, "Last Swing Low", text_color=color.white)
-    table.cell(dashboard, 1, 5, str.tostring(lastSwingLow), text_color=color.white)
+    table.cell(dashboard,0,2,"Structure")
+    table.cell(dashboard,1,2,str.tostring(math.round(structureScore)))
 
-    table.cell(dashboard, 0, 6, "Prev Swing High", text_color=color.white)
-    table.cell(dashboard, 1, 6, str.tostring(previousSwingHigh), text_color=color.white)
+    table.cell(dashboard,0,3,"Liquidity")
+    table.cell(dashboard,1,3,str.tostring(math.round(liquidityScore)))
 
-    table.cell(dashboard, 0, 7, "Prev Swing Low", text_color=color.white)
-    table.cell(dashboard, 1, 7, str.tostring(previousSwingLow), text_color=color.white)
+    table.cell(dashboard,0,4,"Sweep")
+    table.cell(dashboard,1,4,str.tostring(math.round(sweepScore)))
 
-    table.cell(dashboard, 0, 8, "Equal High", text_color=color.white)
-    table.cell(dashboard, 1, 8, str.tostring(equalHighPrice), text_color=color.white)
+    table.cell(dashboard,0,5,"MTF")
+    table.cell(dashboard,1,5,str.tostring(math.round(mtfScore)))
 
-    table.cell(dashboard, 0, 9, "Equal Low", text_color=color.white)
-    table.cell(dashboard, 1, 9, str.tostring(equalLowPrice), text_color=color.white)
+    table.cell(dashboard,0,6,"FVG")
+    table.cell(dashboard,1,6,str.tostring(math.round(fvgScore)))
 
-    table.cell(dashboard, 0, 10, "Last Sweep", text_color=color.white)
-    table.cell(dashboard, 1, 10, str.tostring(lastSweepPrice), text_color=color.white)
+    table.cell(dashboard,0,7,"Order Block")
+    table.cell(dashboard,1,7,str.tostring(math.round(orderBlockScore)))
+
+    table.cell(dashboard,0,8,"PD")
+    table.cell(dashboard,1,8,str.tostring(math.round(pdScore)))
+
+    table.cell(dashboard,0,9,"Session")
+    table.cell(dashboard,1,9,activeSession)
+
+    table.cell(dashboard,0,10,"Confidence")
+    table.cell(dashboard,1,10,str.tostring(math.round(confidenceScore))+"%")
+
+    table.cell(dashboard,0,11,"Final Score")
+    table.cell(dashboard,1,11,str.tostring(math.round(finalScore)))
+
+    table.cell(dashboard,0,12,"Market State")
+    table.cell(dashboard,1,12,marketState)
+
+    table.cell(dashboard,0,13,"Trade Ready")
+    table.cell(dashboard,1,13,tradeReady ? "YES" : "NO")
+
+    table.cell(dashboard,0,14,"Execution")
+    table.cell(dashboard,1,14,executionStatus)
+
+    table.cell(dashboard,0,15,"Risk")
+    table.cell(dashboard,1,15,riskRating)
+    //====================================================
+// INSTITUTIONAL VALIDATION
+//====================================================
+
+    table.cell(dashboard,0,16,"Institutional")
+    table.cell(dashboard,1,16,str.tostring(getInstitutionalScore()) + " / 8")
+
+    table.cell(dashboard,0,17,"Trend")
+    table.cell(dashboard,1,17,getTrendCheck())
+
+    table.cell(dashboard,0,18,"Structure")
+    table.cell(dashboard,1,18,getStructureCheck())
+
+    table.cell(dashboard,0,19,"BOS / CHOCH")
+    table.cell(dashboard,1,19,getBOSCheck())
+
+    table.cell(dashboard,0,20,"Liquidity")
+    table.cell(dashboard,1,20,getLiquidityCheck())
+
+    table.cell(dashboard,0,21,"HTF")
+    table.cell(dashboard,1,21,getHTFCheck())
+
+    table.cell(dashboard,0,22,"FVG")
+    table.cell(dashboard,1,22,getFVGCheck())
+
+    table.cell(dashboard,0,23,"Order Block")
+    table.cell(dashboard,1,23,getOBCheck())
+
+    table.cell(dashboard,0,24,"Session")
+    table.cell(dashboard,1,24,getSessionCheck())
 
 clearTradeBox() =>
     table.clear(tradeBox, 0, 0, 1, 9)
