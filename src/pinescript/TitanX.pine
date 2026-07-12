@@ -50,6 +50,26 @@ dashboardPage = input.string(
         "DEBUG"
     ],
     group = groupDashboard)
+//=====================================================
+// TRADE SETUP PANEL
+//=====================================================
+
+groupTradeBox = "Trade Setup"
+
+showTradeBox = input.bool(
+     true,
+     "Show Trade Setup",
+     group = groupTradeBox)
+
+tradeBoxPosition = input.string(
+     "Bottom Right",
+     "Position",
+     options=[
+     "Top Left",
+     "Top Right",
+     "Bottom Left",
+     "Bottom Right"],
+     group=groupTradeBox)    
 //=============================================================================
 // STRUCTURE INPUTS
 //=============================================================================
@@ -77,7 +97,8 @@ showLiquidityLabels = input.bool(
      true,
      "Show Liquidity Labels",
      group = groupLiquidity)
-     //=============================================================================
+
+//=============================================================================
 // MULTI TIMEFRAME
 //=============================================================================
 
@@ -322,6 +343,10 @@ var bool tradeReady = false
 var float entryPrice = na
 
 var string executionStatus = "WAIT"
+//=====================================================
+// INSTITUTIONAL CANDLE RATING ENGINE
+//=====================================================
+
 //=============================================================================
 // BOS / CHOCH
 //=============================================================================
@@ -329,6 +354,20 @@ var string executionStatus = "WAIT"
 var float previousSwingHigh = na
 var float previousSwingLow  = na
 
+//=====================================================
+// AI SIGNAL PANEL
+//=====================================================
+
+var string aiSignal = "WAIT"
+
+var float aiConfidence = 0.0
+
+var int trendStars = 0
+var int structureStars = 0
+var int liquidityStars = 0
+var int mtfStars = 0
+
+var string riskLevel = "UNKNOWN"
 //=============================================================================
 // UTILITY FUNCTIONS
 //=============================================================================
@@ -352,6 +391,18 @@ var table dashboard = table.new(
      frame_color=color.gray,
      frame_width=1)
 
+//=====================================================
+// TRADE SETUP TABLE
+//=====================================================
+
+var table tradeBox =
+     table.new(
+          position.bottom_right,
+          2,
+          10,
+          bgcolor = color.new(color.white, 0),
+          frame_color=color.gray,
+          frame_width=1)
 getTrendDirection() =>
 
     string dir = ""
@@ -378,7 +429,17 @@ getTrendDirection() =>
         dir := "ULTRA BEAR"
 
     dir
+getTradeBoxPosition() =>
 
+    switch tradeBoxPosition
+
+        "Top Left" => position.top_left
+
+        "Top Right" => position.top_right
+
+        "Bottom Left" => position.bottom_left
+
+        => position.bottom_right
 //---------------------------------------------------------
 
 clearDashboard() =>
@@ -632,6 +693,41 @@ drawDebug() =>
     table.cell(dashboard, 0, 10, "Last Sweep", text_color=color.white)
     table.cell(dashboard, 1, 10, str.tostring(lastSweepPrice), text_color=color.white)
 
+clearTradeBox() =>
+    table.clear(tradeBox, 0, 0, 1, 9)
+    
+drawTradeBox() =>
+
+    clearTradeBox()
+
+    table.cell(tradeBox,0,0,"TITAN X SETUP")
+
+    table.cell(tradeBox,0,1,"Signal")
+    table.cell(tradeBox,1,1,marketState)
+
+    table.cell(tradeBox,0,2,"Entry")
+    table.cell(tradeBox,1,2,str.tostring(entryPrice))
+
+    table.cell(tradeBox,0,3,"SL")
+    table.cell(tradeBox,1,3,str.tostring(stopLoss))
+
+    table.cell(tradeBox,0,4,"TP1")
+    table.cell(tradeBox,1,4,str.tostring(takeProfit1))
+
+    table.cell(tradeBox,0,5,"TP2")
+    table.cell(tradeBox,1,5,str.tostring(takeProfit2))
+
+    table.cell(tradeBox,0,6,"TP3")
+    table.cell(tradeBox,1,6,str.tostring(takeProfit3))
+
+    table.cell(tradeBox,0,7,"R:R")
+    table.cell(tradeBox,1,7,"1 : "+str.tostring(riskReward))
+
+    table.cell(tradeBox,0,8,"Status")
+    table.cell(tradeBox,1,8,executionStatus)
+
+    table.cell(tradeBox,0,9,"Ready")
+    table.cell(tradeBox,1,9,tradeReady ? "YES" : "NO")
 //---------------------------------------------------------
 
 updateDashboard() =>
@@ -743,7 +839,17 @@ calculateConfidence()=>
     confidence += sessionScore * 0.05
 
     math.min(confidence,100)
-    //==============================================================
+
+getStars(score) =>
+
+    score >= 90 ? "★★★★★" :
+    score >= 75 ? "★★★★☆" :
+    score >= 60 ? "★★★☆☆" :
+    score >= 40 ? "★★☆☆☆" :
+    score >= 20 ? "★☆☆☆☆" :
+    "☆☆☆☆☆"    
+    
+//==============================================================
 // FINAL SCORE ENGINE
 //==============================================================
 
@@ -1322,6 +1428,14 @@ if structureDirection == "LL" and bullBOS
 
 if structureDirection == "HH" and bearBOS
     bearCHOCH := true
+//=====================================================
+// ENTRY EXECUTION ENGINE
+//=====================================================
+
+//=====================================================
+// INSTITUTIONAL CANDLE ENGINE
+//=====================================================
+
 //=============================================================================
 // MAIN
 //=============================================================================
@@ -1473,6 +1587,9 @@ marketState := calculateSmartDecision()
 if showDashboard and barstate.islast
     updateDashboard()
 
+if showTradeBox
+    drawTradeBox()
+    
 plot(ema20,"EMA20",color=color.orange,linewidth=2)
 plot(ema50,"EMA50",color=color.blue)
 plot(ema100,"EMA100",color=color.green)
