@@ -570,6 +570,24 @@ drawSummary() =>
 
     table.cell(dashboard,0,26,"Risk")
     table.cell(dashboard,1,26,getRiskLevel())
+    //====================================================
+// PROFESSIONAL AI PANEL
+//====================================================
+
+table.cell(dashboard,0,27,"Trend ★")
+table.cell(dashboard,1,27,getStars(trendScore))
+
+table.cell(dashboard,0,28,"Structure ★")
+table.cell(dashboard,1,28,getStars(structureScore))
+
+table.cell(dashboard,0,29,"Liquidity ★")
+table.cell(dashboard,1,29,getStars(liquidityScore))
+
+table.cell(dashboard,0,30,"HTF ★")
+table.cell(dashboard,1,30,getStars(mtfScore))
+
+table.cell(dashboard,0,31,"Signal")
+table.cell(dashboard,1,31,getAISignal())
 
 //---------------------------------------------------------
 // PAGE 2: STRUCTURE -- market structure / liquidity
