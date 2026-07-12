@@ -761,43 +761,57 @@ drawExecution() =>
 //---------------------------------------------------------
 
 drawStatistics() =>
+
     clearDashboard()
 
-    table.cell(dashboard, 0, 0, "TITAN X — STATISTICS", text_color=color.white, bgcolor=color.new(#2962ff, 0))
-    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    //====================================================
+    // HEADER
+    //====================================================
 
-    table.cell(dashboard, 0, 1, "Trend Score", text_color=color.white)
-    table.cell(dashboard, 1, 1, str.tostring(math.round(trendScore)), text_color=color.white)
+    table.cell(dashboard,0,0," TITAN X — STATISTICS ",
+        bgcolor=HEADER_BG,
+        text_color=TITLE_COLOR)
 
-    table.cell(dashboard, 0, 2, "Structure Score", text_color=color.white)
-    table.cell(dashboard, 1, 2, str.tostring(math.round(structureScore)), text_color=color.white)
+    table.cell(dashboard,1,0,TITAN_BUILD,
+        bgcolor=HEADER_BG,
+        text_color=TITLE_COLOR)
 
-    table.cell(dashboard, 0, 3, "Liquidity Score", text_color=color.white)
-    table.cell(dashboard, 1, 3, str.tostring(math.round(liquidityScore)), text_color=color.white)
+    //----------------------------------------------------
+    // ENGINE SCORES
+    //----------------------------------------------------
 
-    table.cell(dashboard, 0, 4, "Sweep Score", text_color=color.white)
-    table.cell(dashboard, 1, 4, str.tostring(math.round(sweepScore)), text_color=color.white)
+    table.cell(dashboard,0,1,"Trend Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,1,str.tostring(math.round(trendScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 5, "MTF Score", text_color=color.white)
-    table.cell(dashboard, 1, 5, str.tostring(math.round(mtfScore)), text_color=color.white)
+    table.cell(dashboard,0,2,"Structure Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,2,str.tostring(math.round(structureScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 6, "FVG Score", text_color=color.white)
-    table.cell(dashboard, 1, 6, str.tostring(math.round(fvgScore)), text_color=color.white)
+    table.cell(dashboard,0,3,"Liquidity Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,3,str.tostring(math.round(liquidityScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 7, "OB Score", text_color=color.white)
-    table.cell(dashboard, 1, 7, str.tostring(math.round(orderBlockScore)), text_color=color.white)
+    table.cell(dashboard,0,4,"Sweep Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,4,str.tostring(math.round(sweepScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 8, "PD Score", text_color=color.white)
-    table.cell(dashboard, 1, 8, str.tostring(math.round(pdScore)), text_color=color.white)
+    table.cell(dashboard,0,5,"HTF Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,5,str.tostring(math.round(mtfScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 9, "Session Score", text_color=color.white)
-    table.cell(dashboard, 1, 9, str.tostring(math.round(sessionScore)), text_color=color.white)
+    table.cell(dashboard,0,6,"FVG Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,6,str.tostring(math.round(fvgScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 10, "Final Score", text_color=color.white)
-    table.cell(dashboard, 1, 10, str.tostring(math.round(finalScore)), text_color=color.white)
+    table.cell(dashboard,0,7,"Order Block",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,7,str.tostring(math.round(orderBlockScore)),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 11, "Confidence", text_color=color.white)
-    table.cell(dashboard, 1, 11, str.tostring(math.round(confidenceScore)) + "%", text_color=color.white)
+    table.cell(dashboard,0,8,"PD Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,8,str.tostring(math.round(pdScore)),text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,9,"Session",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,9,activeSession,text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,10,"Confidence",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,10,str.tostring(math.round(confidenceScore))+"%",text_color=VALUE_COLOR)
+
+    table.cell(dashboard,0,11,"Final Score",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,11,str.tostring(math.round(finalScore)),text_color=VALUE_COLOR)
 
 //---------------------------------------------------------
 // PAGE 6: DEBUG -- raw internal values for troubleshooting
