@@ -386,7 +386,7 @@ percent(a, b) =>
 var table dashboard = table.new(
      position.top_right,
      2,
-     16,
+     32,
      bgcolor=color.new(#1a1c2c, 0),
      frame_color=color.gray,
      frame_width=1)
@@ -440,10 +440,67 @@ getTradeBoxPosition() =>
         "Bottom Left" => position.bottom_left
 
         => position.bottom_right
+
+//====================================================
+// AI HELPERS
+//====================================================
+
+getAISignal() =>
+
+    string signal = ""
+
+    if finalScore >= 90
+        signal := "STRONG BUY"
+    else if finalScore >= 75
+        signal := "BUY"
+    else if finalScore >= 55
+        signal := "WAIT"
+    else if finalScore >= 35
+        signal := "SELL"
+    else
+        signal := "STRONG SELL"
+
+    signal
+
+
+getRiskLevel() =>
+
+    string risk = ""
+
+    if riskReward >= 3
+        risk := "LOW"
+    else if riskReward >= 2
+        risk := "MEDIUM"
+    else
+        risk := "HIGH"
+
+    risk
+
+//==================================================
+// STAR RATING
+//==================================================
+
+getStars(score)=>
+
+    string stars = ""
+
+    if score >= 90
+        stars := "★★★★★"
+    else if score >= 75
+        stars := "★★★★☆"
+    else if score >= 60
+        stars := "★★★☆☆"
+    else if score >= 40
+        stars := "★★☆☆☆"
+    else
+        stars := "★☆☆☆☆"
+
+    stars 
+
 //---------------------------------------------------------
 
 clearDashboard() =>
-    table.clear(dashboard,0,0,1,15)
+    table.clear(dashboard,0,0,1,31)
 
 //---------------------------------------------------------
 // PAGE 1: SUMMARY -- quick top-level read
@@ -489,6 +546,30 @@ drawSummary() =>
 
     table.cell(dashboard, 0, 11, "Ready", text_color=color.white)
     table.cell(dashboard, 1, 11, confluenceScore >= 80 ? "YES" : "WAIT", text_color=color.white)
+        //====================================================
+    // AI DECISION
+    //====================================================
+
+    table.cell(dashboard,0,20,"AI Signal")
+    table.cell(dashboard,1,20,getAISignal())
+
+    table.cell(dashboard,0,21,"Confidence")
+    table.cell(dashboard,1,21,str.tostring(math.round(confidenceScore))+"%")
+
+    table.cell(dashboard,0,22,"Trend")
+    table.cell(dashboard,1,22,getStars(trendScore))
+
+    table.cell(dashboard,0,23,"Structure")
+    table.cell(dashboard,1,23,getStars(structureScore))
+
+    table.cell(dashboard,0,24,"Liquidity")
+    table.cell(dashboard,1,24,getStars(liquidityScore))
+
+    table.cell(dashboard,0,25,"HTF")
+    table.cell(dashboard,1,25,getStars(mtfScore))
+
+    table.cell(dashboard,0,26,"Risk")
+    table.cell(dashboard,1,26,getRiskLevel())
 
 //---------------------------------------------------------
 // PAGE 2: STRUCTURE -- market structure / liquidity
@@ -750,7 +831,7 @@ updateDashboard() =>
     else
         drawDebug()
 
-   
+
 //=============================================================================
 // LOGGER
 //=============================================================================
@@ -840,15 +921,7 @@ calculateConfidence()=>
 
     math.min(confidence,100)
 
-getStars(score) =>
 
-    score >= 90 ? "★★★★★" :
-    score >= 75 ? "★★★★☆" :
-    score >= 60 ? "★★★☆☆" :
-    score >= 40 ? "★★☆☆☆" :
-    score >= 20 ? "★☆☆☆☆" :
-    "☆☆☆☆☆"    
-    
 //==============================================================
 // FINAL SCORE ENGINE
 //==============================================================
