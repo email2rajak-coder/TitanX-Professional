@@ -716,44 +716,46 @@ drawSmartMoney() =>
 //---------------------------------------------------------
 
 drawExecution() =>
+
     clearDashboard()
 
-    table.cell(dashboard, 0, 0, "TITAN X — EXECUTION", text_color=color.white, bgcolor=color.new(#2962ff, 0))
-    table.cell(dashboard, 1, 0, TITAN_BUILD, text_color=color.white, bgcolor=color.new(#2962ff, 0))
+    //====================================================
+    // HEADER
+    //====================================================
 
-    table.cell(dashboard, 0, 1, "Execution", text_color=color.white)
-    table.cell(dashboard, 1, 1, executionStatus, text_color=color.white)
+    table.cell(dashboard,0,0," TITAN X — EXECUTION ",bgcolor=HEADER_BG,text_color=TITLE_COLOR)
+    table.cell(dashboard,1,0,TITAN_BUILD,bgcolor=HEADER_BG,text_color=TITLE_COLOR)
 
-    table.cell(dashboard, 0, 2, "Trade Ready", text_color=color.white)
-    table.cell(dashboard, 1, 2, tradeReady ? "YES" : "NO", text_color=color.white)
+    //====================================================
+    // SIGNAL
+    //====================================================
 
-    table.cell(dashboard, 0, 3, "Allow Long/Short", text_color=color.white)
-    table.cell(dashboard, 1, 3, allowLong ? "LONG" : allowShort ? "SHORT" : "-", text_color=color.white)
+    table.cell(dashboard,0,1,"Signal",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,1,getAISignal(),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 4, "Entry", text_color=color.white)
-    table.cell(dashboard, 1, 4, str.tostring(entryPrice), text_color=color.white)
+    table.cell(dashboard,0,2,"Entry",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,2,str.tostring(entryPrice),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 5, "SL", text_color=color.white)
-    table.cell(dashboard, 1, 5, str.tostring(stopLoss), text_color=color.white)
+    table.cell(dashboard,0,3,"Stop Loss",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,3,str.tostring(stopLoss),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 6, "TP1", text_color=color.white)
-    table.cell(dashboard, 1, 6, str.tostring(takeProfit1), text_color=color.white)
+    table.cell(dashboard,0,4,"TP1",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,4,str.tostring(takeProfit1),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 7, "TP2", text_color=color.white)
-    table.cell(dashboard, 1, 7, str.tostring(takeProfit2), text_color=color.white)
+    table.cell(dashboard,0,5,"TP2",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,5,str.tostring(takeProfit2),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 8, "TP3", text_color=color.white)
-    table.cell(dashboard, 1, 8, str.tostring(takeProfit3), text_color=color.white)
+    table.cell(dashboard,0,6,"TP3",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,6,str.tostring(takeProfit3),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 9, "R:R", text_color=color.white)
-    table.cell(dashboard, 1, 9, "1:" + str.tostring(riskReward), text_color=color.white)
+    table.cell(dashboard,0,7,"Risk : Reward",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,7,"1 : "+str.tostring(riskReward),text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 10, "Entry Quality", text_color=color.white)
-    table.cell(dashboard, 1, 10, entryQuality, text_color=color.white)
+    table.cell(dashboard,0,8,"Status",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,8,executionStatus,text_color=VALUE_COLOR)
 
-    table.cell(dashboard, 0, 11, "Risk Rating", text_color=color.white)
-    table.cell(dashboard, 1, 11, riskRating, text_color=color.white)
-
+    table.cell(dashboard,0,9,"Execution",text_color=LABEL_COLOR)
+    table.cell(dashboard,1,9,"MANUAL",text_color=VALUE_COLOR)
 //---------------------------------------------------------
 // PAGE 5: STATISTICS -- all scoring components + final score
 //---------------------------------------------------------
