@@ -4,7 +4,7 @@
 // Core Framework
 //-----------------------------------------------------------------------------
 // Version : 0.6.0
-// Build   : 0005
+// Build   : 0006.3
 // Module  : Core Engine
 // Status  : Stable
 //=============================================================================
@@ -240,6 +240,50 @@ var float swingStrength = 0.0
 
 var bool protectedHighBroken = false
 var bool protectedLowBroken  = false
+//====================================================
+// SMC-002 : MARKET STRUCTURE CONSTANTS
+//====================================================
+
+// Market State Constants
+int STATE_NEUTRAL           = 0
+int STATE_BULL_EXPANSION    = 1
+int STATE_BULL_PULLBACK     = 2
+int STATE_BULL_CONTINUATION = 3
+int STATE_TRANSITION        = 4
+int STATE_BEAR_PULLBACK     = 5
+int STATE_BEAR_EXPANSION    = 6
+int STATE_BEAR_CONTINUATION = 7
+
+// Structure Variables
+
+
+var bool bullStructure = false
+var bool bearStructure = false
+
+var float structureStrength = 0.0
+//====================================================
+// SMC SWING STATE ENGINE
+//====================================================
+
+// Swing State
+var bool candidateHigh = false
+var bool candidateLow  = false
+
+var bool confirmedHigh = false
+var bool confirmedLow  = false
+
+var bool protectedHighState = false
+var bool protectedLowState  = false
+
+var bool brokenHigh = false
+var bool brokenLow  = false
+
+var bool liquidityTakenHigh = false
+var bool liquidityTakenLow  = false
+
+// Swing Quality
+var float majorSwingStrength = 0.0
+var float minorSwingStrength = 0.0
 //=============================================================================
 // LIQUIDITY VARIABLES
 //=============================================================================
@@ -1302,7 +1346,7 @@ calculateSmartDecision()=>
 //------------------------------------------------------------
 
     //=============================================================================
-// SMART MARKET STRUCTURE ENGINE
+// / SMC CORE v1.0
 //=============================================================================
 
 pivotHigh = ta.pivothigh(high, pivotLeft, pivotRight)
@@ -1318,16 +1362,22 @@ bool newPivotLow  = not na(pivotLow)
 
 // Detect Major Swing High
 if newPivotHigh
+    candidateHigh := true
+
     majorSwingHigh := pivotHigh
     majorHighIndex := bar_index - pivotRight
     majorHighAge := 0
+
     protectedHighBroken := false
 
 // Detect Major Swing Low
 if newPivotLow
+    candidateLow := true
+
     majorSwingLow := pivotLow
     majorLowIndex := bar_index - pivotRight
     majorLowAge := 0
+
     protectedLowBroken := false
 
 // Swing Age Tracking
@@ -1336,6 +1386,31 @@ if not na(majorSwingHigh)
 
 if not na(majorSwingLow)
     majorLowAge += 1
+//=============================================================================
+// SMC-001 : SWING CLASSIFICATION ENGINE
+//=============================================================================
+
+// Classify Major vs Minor Swing High
+if newPivotHigh
+    if na(minorSwingHigh)
+        minorSwingHigh := pivotHigh
+    else
+        if pivotHigh > minorSwingHigh
+            majorSwingHigh := pivotHigh
+            protectedHigh := pivotHigh
+        else
+            weakHigh := pivotHigh
+
+// Classify Major vs Minor Swing Low
+if newPivotLow
+    if na(minorSwingLow)
+        minorSwingLow := pivotLow
+    else
+        if pivotLow < minorSwingLow
+            majorSwingLow := pivotLow
+            protectedLow := pivotLow
+        else
+            weakLow := pivotLow    
 
 if not na(pivotHigh)
 
@@ -1373,6 +1448,331 @@ if not na(pivotHigh)
 
     previousSwingHigh := lastSwingHigh
     lastSwingHigh := pivotHigh
+
+//=============================================================================
+// SMC-002 : STRUCTURE CONTEXT ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// SMC Structure Variables
+//--------------------------------------------------
+
+var int smcMarketState = STATE_NEUTRAL
+
+var bool smcBullTrend = false
+var bool smcBearTrend = false
+
+//=============================================================================
+// SMC-002.1 : PROTECTED SWING ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// Protected Swing Variables
+//--------------------------------------------------
+
+var float smcProtectedHigh = na
+var float smcProtectedLow  = na
+
+var int smcProtectedHighIndex = na
+var int smcProtectedLowIndex  = na
+
+//--------------------------------------------------
+// Promote Confirmed Swings
+//--------------------------------------------------
+
+if confirmedHigh and not na(majorSwingHigh)
+    smcProtectedHigh := majorSwingHigh
+    smcProtectedHighIndex := majorHighIndex
+
+if confirmedLow and not na(majorSwingLow)
+    smcProtectedLow := majorSwingLow
+    smcProtectedLowIndex := majorLowIndex
+//=============================================================================
+// SMC-003 : BREAK OF STRUCTURE ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// BOS Variables
+//--------------------------------------------------
+
+var bool smcBullBOS = false
+var bool smcBearBOS = false
+
+var float smcBullBOSLevel = na
+var float smcBearBOSLevel = na
+
+//--------------------------------------------------
+// Bullish BOS
+//--------------------------------------------------
+
+smcBullBOS := false
+
+if not na(smcProtectedHigh)
+    if close > smcProtectedHigh
+        smcBullBOS := true
+        smcBullBOSLevel := smcProtectedHigh
+
+//--------------------------------------------------
+// Bearish BOS
+//--------------------------------------------------
+
+smcBearBOS := false
+
+if not na(smcProtectedLow)
+    if close < smcProtectedLow
+        smcBearBOS := true
+        smcBearBOSLevel := smcProtectedLow
+//=============================================================================
+// SMC-004 : CHANGE OF CHARACTER ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// CHOCH Variables
+//--------------------------------------------------
+
+var bool smcBullCHOCH = false
+var bool smcBearCHOCH = false
+
+var float smcBullCHOCHLevel = na
+var float smcBearCHOCHLevel = na
+
+//--------------------------------------------------
+// Bullish CHOCH
+//--------------------------------------------------
+
+smcBullCHOCH := false
+
+if not na(smcProtectedLow)
+    if close > smcProtectedLow and smcBearTrend
+        smcBullCHOCH := true
+        smcBullCHOCHLevel := smcProtectedLow
+
+//--------------------------------------------------
+// Bearish CHOCH
+//--------------------------------------------------
+
+smcBearCHOCH := false
+
+if not na(smcProtectedHigh)
+    if close < smcProtectedHigh and smcBullTrend
+        smcBearCHOCH := true
+        smcBearCHOCHLevel := smcProtectedHigh
+//=============================================================================
+// SMC-005 : LIQUIDITY ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// Liquidity Variables
+//--------------------------------------------------
+
+var float smcBuySideLiquidity = na
+var float smcSellSideLiquidity = na
+
+var bool smcLiquiditySweepHigh = false
+var bool smcLiquiditySweepLow = false
+
+//--------------------------------------------------
+// Buy Side Liquidity
+//--------------------------------------------------
+
+if not na(smcProtectedHigh)
+    smcBuySideLiquidity := smcProtectedHigh
+
+//--------------------------------------------------
+// Sell Side Liquidity
+//--------------------------------------------------
+
+if not na(smcProtectedLow)
+    smcSellSideLiquidity := smcProtectedLow
+
+//--------------------------------------------------
+// Liquidity Sweep Detection
+//--------------------------------------------------
+
+smcLiquiditySweepHigh := false
+smcLiquiditySweepLow := false
+
+if not na(smcBuySideLiquidity)
+    if high > smcBuySideLiquidity and close < smcBuySideLiquidity
+        smcLiquiditySweepHigh := true
+
+if not na(smcSellSideLiquidity)
+    if low < smcSellSideLiquidity and close > smcSellSideLiquidity
+        smcLiquiditySweepLow := true
+//=============================================================================
+// SMC-006 : DISPLACEMENT ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// Displacement Variables
+//--------------------------------------------------
+
+var bool smcBullDisplacement = false
+var bool smcBearDisplacement = false
+
+var float smcBullDisplacementScore = 0.0
+var float smcBearDisplacementScore = 0.0
+
+//--------------------------------------------------
+// Candle Measurements
+//--------------------------------------------------
+
+float candleBody = math.abs(close - open)
+float candleRange = high - low
+
+//--------------------------------------------------
+// Bullish Displacement
+//--------------------------------------------------
+
+smcBullDisplacement := false
+smcBullDisplacementScore := 0.0
+
+if close > open and candleRange > 0
+
+    smcBullDisplacementScore := (candleBody / candleRange) * 100
+
+    if smcBullDisplacementScore >= 70
+        smcBullDisplacement := true
+
+//--------------------------------------------------
+// Bearish Displacement
+//--------------------------------------------------
+
+smcBearDisplacement := false
+smcBearDisplacementScore := 0.0
+
+if close < open and candleRange > 0
+
+    smcBearDisplacementScore := (candleBody / candleRange) * 100
+
+    if smcBearDisplacementScore >= 70
+        smcBearDisplacement := true
+//=============================================================================
+// SMC-007 : RISK CONTEXT ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// Risk Variables
+//--------------------------------------------------
+
+var bool smcTradeAllowed = false
+var float smcRiskScore = 0.0
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+smcTradeAllowed := false
+smcRiskScore := 0.0
+
+//--------------------------------------------------
+// Bullish Context
+//--------------------------------------------------
+
+if smcBullTrend and smcBullBOS and smcBullDisplacement
+    smcTradeAllowed := true
+    smcRiskScore += 50
+
+//--------------------------------------------------
+// Bearish Context
+//--------------------------------------------------
+
+if smcBearTrend and smcBearBOS and smcBearDisplacement
+    smcTradeAllowed := true
+    smcRiskScore += 50
+
+//--------------------------------------------------
+// Liquidity Confirmation
+//--------------------------------------------------
+
+if smcLiquiditySweepHigh or smcLiquiditySweepLow
+    smcRiskScore += 25
+
+//--------------------------------------------------
+// CHOCH Penalty
+//--------------------------------------------------
+
+if smcBullCHOCH or smcBearCHOCH
+    smcRiskScore -= 25
+
+//--------------------------------------------------
+// Clamp
+//--------------------------------------------------
+
+smcRiskScore := math.max(0.0, math.min(100.0, smcRiskScore))    
+//=============================================================================
+// AI-001 : AI INPUT LAYER
+//=============================================================================
+
+//--------------------------------------------------
+// AI Variables
+//--------------------------------------------------
+
+var float aiTrendScore = 0.0
+var float aiStructureScore = 0.0
+var float aiLiquidityScore = 0.0
+var float aiMomentumScore = 0.0
+var float aiRiskScore = 0.0
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+aiTrendScore := 0.0
+aiStructureScore := 0.0
+aiLiquidityScore := 0.0
+aiMomentumScore := 0.0
+aiRiskScore := smcRiskScore
+
+//--------------------------------------------------
+// Trend Score
+//--------------------------------------------------
+
+if smcBullTrend or smcBearTrend
+    aiTrendScore := 100
+
+//--------------------------------------------------
+// Structure Score
+//--------------------------------------------------
+
+if smcBullBOS or smcBearBOS
+    aiStructureScore += 50
+
+if smcBullCHOCH or smcBearCHOCH
+    aiStructureScore += 50
+
+//--------------------------------------------------
+// Liquidity Score
+//--------------------------------------------------
+
+if smcLiquiditySweepHigh or smcLiquiditySweepLow
+    aiLiquidityScore := 100
+
+//--------------------------------------------------
+// Momentum Score
+//--------------------------------------------------
+
+if smcBullDisplacement or smcBearDisplacement
+    aiMomentumScore := 100
+//--------------------------------------------------
+// Determine Current Structure Context
+//--------------------------------------------------
+
+if not na(protectedHigh) and not na(protectedLow)
+
+    if close > protectedHigh
+        smcMarketState := STATE_BULL_EXPANSION
+
+    else if close < protectedLow
+        smcMarketState := STATE_BEAR_EXPANSION
+
+//--------------------------------------------------
+// Trend Flags
+//--------------------------------------------------
+
+smcBullTrend := smcMarketState == STATE_BULL_EXPANSION or smcMarketState == STATE_BULL_CONTINUATION
+
+smcBearTrend := smcMarketState == STATE_BEAR_EXPANSION or smcMarketState == STATE_BEAR_CONTINUATION
 
 //------------------------------------------------------
 
