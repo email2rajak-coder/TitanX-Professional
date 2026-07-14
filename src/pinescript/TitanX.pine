@@ -204,6 +204,43 @@ var bool bearBOS = false
 var bool bullCHOCH = false
 var bool bearCHOCH = false
 //=============================================================================
+// SMC CORE v1.0
+// Engine : SMC-001
+// Module : Professional Swing Engine
+// Status : Development
+//=============================================================================
+//====================================================
+// SMC SWING VARIABLES
+//====================================================
+
+// Major Swings
+var float majorSwingHigh = na
+var float majorSwingLow  = na
+
+// Minor Swings
+var float minorSwingHigh = na
+var float minorSwingLow  = na
+
+// Protected Structure
+var float protectedHigh = na
+var float protectedLow  = na
+
+// Weak Structure
+var float weakHigh = na
+var float weakLow  = na
+
+// Swing Metadata
+var int majorHighIndex = na
+var int majorLowIndex  = na
+
+var int majorHighAge = 0
+var int majorLowAge  = 0
+
+var float swingStrength = 0.0
+
+var bool protectedHighBroken = false
+var bool protectedLowBroken  = false
+//=============================================================================
 // LIQUIDITY VARIABLES
 //=============================================================================
 
@@ -1270,6 +1307,35 @@ calculateSmartDecision()=>
 
 pivotHigh = ta.pivothigh(high, pivotLeft, pivotRight)
 pivotLow  = ta.pivotlow(low, pivotLeft, pivotRight)
+
+//=============================================================================
+// SMC-001 : SWING DETECTION ENGINE
+//=============================================================================
+
+// Confirmed Pivot Detection
+bool newPivotHigh = not na(pivotHigh)
+bool newPivotLow  = not na(pivotLow)
+
+// Detect Major Swing High
+if newPivotHigh
+    majorSwingHigh := pivotHigh
+    majorHighIndex := bar_index - pivotRight
+    majorHighAge := 0
+    protectedHighBroken := false
+
+// Detect Major Swing Low
+if newPivotLow
+    majorSwingLow := pivotLow
+    majorLowIndex := bar_index - pivotRight
+    majorLowAge := 0
+    protectedLowBroken := false
+
+// Swing Age Tracking
+if not na(majorSwingHigh)
+    majorHighAge += 1
+
+if not na(majorSwingLow)
+    majorLowAge += 1
 
 if not na(pivotHigh)
 
