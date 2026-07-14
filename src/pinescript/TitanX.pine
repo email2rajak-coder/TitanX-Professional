@@ -3,8 +3,8 @@
 // TITAN X PROFESSIONAL
 // Core Framework
 //-----------------------------------------------------------------------------
-// Version : 0.6.0
-// Build   : 0006.3
+// Version : 0.7.0
+// Build   : 0007.4
 // Module  : Core Engine
 // Status  : Stable
 //=============================================================================
@@ -1754,6 +1754,227 @@ if smcLiquiditySweepHigh or smcLiquiditySweepLow
 
 if smcBullDisplacement or smcBearDisplacement
     aiMomentumScore := 100
+
+
+//=============================================================================
+// SMC-008 : VALIDATION ENGINE
+//=============================================================================
+
+//--------------------------------------------------
+// Validation Variables
+//--------------------------------------------------
+
+var bool smcValidationPassed = false
+var float smcValidationScore = 0.0
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+smcValidationPassed := false
+smcValidationScore := 0.0
+
+//--------------------------------------------------
+// Bullish Validation
+//--------------------------------------------------
+
+if smcBullTrend and smcBullBOS and smcBullDisplacement
+    smcValidationScore += 50
+
+//--------------------------------------------------
+// Bearish Validation
+//--------------------------------------------------
+
+if smcBearTrend and smcBearBOS and smcBearDisplacement
+    smcValidationScore += 50
+
+//--------------------------------------------------
+// Liquidity Confirmation
+//--------------------------------------------------
+
+if smcLiquiditySweepHigh or smcLiquiditySweepLow
+    smcValidationScore += 25
+
+//--------------------------------------------------
+// Final Validation
+//--------------------------------------------------
+
+if smcValidationScore >= 50
+    smcValidationPassed := true
+
+//=============================================================================
+// OB-001 : PROFESSIONAL ORDER BLOCK FOUNDATION
+//=============================================================================
+
+//--------------------------------------------------
+// Order Block Variables
+//--------------------------------------------------
+
+var bool smcBullOB = false
+var bool smcBearOB = false
+
+var float smcBullOBHigh = na
+var float smcBullOBLow = na
+
+var float smcBearOBHigh = na
+var float smcBearOBLow = na
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+smcBullOB := false
+smcBearOB := false
+
+//--------------------------------------------------
+// Bullish Order Block
+//--------------------------------------------------
+
+if smcBullBOS and smcBullDisplacement
+
+    smcBullOB := true
+
+    smcBullOBHigh := high[1]
+    smcBullOBLow := low[1]
+
+//--------------------------------------------------
+// Bearish Order Block
+//--------------------------------------------------
+
+if smcBearBOS and smcBearDisplacement
+
+    smcBearOB := true
+
+    smcBearOBHigh := high[1]
+    smcBearOBLow := low[1]
+
+//=============================================================================
+// FVG-001 : FAIR VALUE GAP FOUNDATION
+//=============================================================================
+
+//--------------------------------------------------
+// Fair Value Gap Variables
+//--------------------------------------------------
+
+var bool smcBullFVG = false
+var bool smcBearFVG = false
+
+var float smcBullFVGHigh = na
+var float smcBullFVGLow = na
+
+var float smcBearFVGHigh = na
+var float smcBearFVGLow = na
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+smcBullFVG := false
+smcBearFVG := false
+
+//--------------------------------------------------
+// Bullish Fair Value Gap
+//--------------------------------------------------
+
+if low > high[2]
+
+    smcBullFVG := true
+
+    smcBullFVGHigh := low
+    smcBullFVGLow := high[2]
+
+//--------------------------------------------------
+// Bearish Fair Value Gap
+//--------------------------------------------------
+
+if high < low[2]
+
+    smcBearFVG := true
+
+    smcBearFVGHigh := low[2]
+    smcBearFVGLow := high
+
+//=============================================================================
+// BB-001 : BREAKER BLOCK FOUNDATION
+//=============================================================================
+
+//--------------------------------------------------
+// Breaker Variables
+//--------------------------------------------------
+
+var bool smcBullBreaker = false
+var bool smcBearBreaker = false
+
+var float smcBullBreakerHigh = na
+var float smcBullBreakerLow = na
+
+var float smcBearBreakerHigh = na
+var float smcBearBreakerLow = na
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+smcBullBreaker := false
+smcBearBreaker := false
+
+//--------------------------------------------------
+// Bullish Breaker
+//--------------------------------------------------
+
+if smcBullCHOCH and smcBearOB
+
+    smcBullBreaker := true
+
+    smcBullBreakerHigh := smcBearOBHigh
+    smcBullBreakerLow := smcBearOBLow
+
+//--------------------------------------------------
+// Bearish Breaker
+//--------------------------------------------------
+
+if smcBearCHOCH and smcBullOB
+
+    smcBearBreaker := true
+
+    smcBearBreakerHigh := smcBullOBHigh
+    smcBearBreakerLow := smcBullOBLow
+
+//=============================================================================
+// MB-001 : MITIGATION BLOCK FOUNDATION
+//=============================================================================
+
+//--------------------------------------------------
+// Mitigation Variables
+//--------------------------------------------------
+
+var bool smcBullMitigation = false
+var bool smcBearMitigation = false
+
+//--------------------------------------------------
+// Reset
+//--------------------------------------------------
+
+smcBullMitigation := false
+smcBearMitigation := false
+
+//--------------------------------------------------
+// Bullish Mitigation
+//--------------------------------------------------
+
+if smcBullOB and not na(smcBullOBHigh) and not na(smcBullOBLow)
+
+    if low <= smcBullOBHigh and high >= smcBullOBLow
+        smcBullMitigation := true
+
+//--------------------------------------------------
+// Bearish Mitigation
+//--------------------------------------------------
+
+if smcBearOB and not na(smcBearOBHigh) and not na(smcBearOBLow)
+
+    if high >= smcBearOBLow and low <= smcBearOBHigh
+        smcBearMitigation := true
 //--------------------------------------------------
 // Determine Current Structure Context
 //--------------------------------------------------
